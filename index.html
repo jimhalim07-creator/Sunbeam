@@ -3,318 +3,174 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sunbeam — Your Warm Month, Week & Day Companion</title>
+  <title>Sunbeam Planner</title>
+  <meta name="description" content="A warm month, week and day planner that syncs with your Outlook calendar and email.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/lib/msal-browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { boxShadow: { xs: '0 1px 2px 0 rgba(120, 95, 70, 0.08)' } } }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #FAF6F0;
-      color: #2D2A26;
-    }
-    .font-serif-human {
-      font-family: 'Fraunces', Georgia, serif;
-    }
-    .progress-ring-circle {
-      transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-      transform: rotate(-90deg);
-      transform-origin: 50% 50%;
-    }
-    .warm-card {
-      background-color: #FFFFFF;
-      border: 1px solid #EFE8DC;
-      box-shadow: 0 4px 20px -4px rgba(120, 95, 70, 0.06);
-    }
-    /* Cozy Evening / Twilight Theme */
-    body.evening-mode {
-      background-color: #1A1715;
-      color: #F3EDE2;
-    }
-    body.evening-mode header {
-      background-color: rgba(28, 25, 23, 0.95) !important;
-      border-color: #362F2A !important;
-    }
-    body.evening-mode .warm-card {
-      background-color: #25211E !important;
-      border-color: #38312C !important;
-      box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.45);
-    }
-    body.evening-mode .text-stone-900,
-    body.evening-mode .text-stone-800,
-    body.evening-mode .text-stone-700 {
-      color: #F5EFE6 !important;
-    }
-    body.evening-mode .text-stone-600,
-    body.evening-mode .text-stone-500 {
-      color: #C7B9A8 !important;
-    }
-    body.evening-mode input,
-    body.evening-mode select,
-    body.evening-mode pre {
-      background-color: #1D1A17 !important;
-      border-color: #3D352E !important;
-      color: #F5EFE6 !important;
-    }
-    body.evening-mode #hero-banner-section {
-      background: linear-gradient(135deg, #28221D 0%, #1F1B18 55%, #2D2120 100%) !important;
-      border-color: #3D342B !important;
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #F5EFE6;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #D5C7B8;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #B8A693;
-    }
-    @media print {
-      body {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-      }
-      header nav,
-      #theme-toggle-btn,
-      #export-csv-btn,
-      #sound-toggle-btn,
-      #print-sheet-btn,
-      #task-form,
-      #toast-container {
-        display: none !important;
-      }
-      .warm-card {
-        box-shadow: none !important;
-        border: 1px solid #D6D3D1 !important;
-        break-inside: avoid;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-amber-200 selection:text-amber-950">
 
-  <!-- Toast Notification / Warm Celebration Banner -->
-  <aside id="toast-container" class="fixed top-5 right-5 z-50 transition-all duration-300 transform -translate-y-24 opacity-0 pointer-events-none max-w-sm w-full px-4" aria-live="polite">
-    <div id="toast-card" class="bg-stone-900/95 text-amber-50 p-4 rounded-2xl shadow-2xl border border-amber-500/30 flex items-center gap-3 backdrop-blur-md">
-      <span id="toast-emoji" class="text-3xl">🌻</span>
+  <!-- Toast -->
+  <aside id="toast-container" class="fixed top-5 inset-x-0 sm:inset-x-auto sm:right-5 z-50 transition-all duration-300 transform -translate-y-24 opacity-0 pointer-events-none flex justify-center sm:block px-4" aria-live="polite">
+    <div id="toast-card" class="bg-stone-900/95 text-amber-50 p-4 rounded-2xl shadow-2xl border border-amber-500/30 flex items-center gap-3 backdrop-blur-md w-full max-w-sm">
+      <span id="toast-emoji" class="text-3xl leading-none">🌻</span>
       <div class="flex-1 min-w-0">
         <p id="toast-title" class="text-xs font-bold uppercase tracking-wider text-amber-300">Little Victory!</p>
-        <p id="toast-msg" class="text-sm font-medium text-stone-100 truncate">You're doing wonderfully today.</p>
+        <p id="toast-msg" class="text-sm font-medium text-stone-100">You're doing wonderfully today.</p>
       </div>
     </div>
   </aside>
 
-  <!-- Top Global Header / Warm Human Navigation -->
+  <!-- Header -->
   <header class="bg-[#FFFDF9]/95 border-b border-[#EFE8DC] sticky top-0 z-40 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
-      
-      <!-- Brand Identity: Sunbeam -->
-      <div class="flex items-center gap-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2.5">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3 shrink-0">
         <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-white shadow-md shadow-amber-200/70">
-          <span class="text-xl">☀️</span>
+          <span class="text-xl leading-none">☀️</span>
         </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-xl font-bold font-serif-human text-stone-900 tracking-tight">Sunbeam</span>
-            <span class="text-[10px] font-bold px-2.5 py-0.5 bg-amber-100/80 text-amber-900 rounded-full border border-amber-200 hidden sm:inline-block">Human Rhythm Planner</span>
-          </div>
-          <p class="text-[11px] text-stone-500 font-medium hidden sm:block">Month • Week • Day • Outlook Sync</p>
+        <div class="leading-tight">
+          <span class="text-xl font-bold font-serif-human text-stone-900 tracking-tight">Sunbeam</span>
+          <p id="header-date" class="text-[11px] text-stone-500 font-medium">Today</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <nav class="flex items-center gap-1 bg-[#F3EDE2] p-1 rounded-2xl border border-[#E6DEC8] overflow-x-auto" aria-label="Planner views">
-        <button type="button" data-view="day" class="nav-tab px-3 py-1.5 text-xs font-bold rounded-xl transition-all bg-white text-amber-900 shadow-sm flex items-center gap-1.5">
-          <span>☀️</span>
-          <span>Day</span>
-        </button>
-        <button type="button" data-view="week" class="nav-tab px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-stone-600 hover:text-stone-900 hover:bg-white/60 flex items-center gap-1.5">
-          <span>📅</span>
-          <span>Week</span>
-        </button>
-        <button type="button" data-view="month" class="nav-tab px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-stone-600 hover:text-stone-900 hover:bg-white/60 flex items-center gap-1.5">
-          <span>🗓️</span>
-          <span>Month</span>
-        </button>
-        <button type="button" data-view="analysis" class="nav-tab px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-stone-600 hover:text-stone-900 hover:bg-white/60 flex items-center gap-1.5">
-          <span>📊</span>
-          <span>Analysis</span>
-        </button>
-        <button type="button" data-view="reminders" class="nav-tab px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-stone-600 hover:text-stone-900 hover:bg-white/60 flex items-center gap-1.5 relative">
-          <span>🔔</span>
-          <span>Reminders</span>
-          <span id="nav-reminder-badge" class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 hidden"></span>
-        </button>
-        <button type="button" data-view="outlook" class="nav-tab px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-stone-600 hover:text-stone-900 hover:bg-white/60 flex items-center gap-1.5">
-          <span>📧</span>
-          <span>Outlook</span>
-        </button>
-      </nav>
-
-      <!-- Right Controls: Live Detected Date, CSV Backup, Sound Toggle -->
-      <div class="flex items-center gap-2">
-        <div class="text-right hidden xl:block pr-1">
-          <div id="header-date" class="text-xs font-bold text-stone-800">Detecting date...</div>
-          <div id="header-month-badge" class="text-[10px] text-amber-700 font-semibold">Live clock synced</div>
-        </div>
-
-        <!-- Quick Backup & GitHub Launch Button -->
-        <button 
-          id="open-launch-hub-btn" 
-          type="button" 
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 transition-colors border border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          title="Open Full JSON Backup, Restore & GitHub Pages Launch Kit"
-        >
-          <span>🚀</span>
-          <span class="hidden sm:inline">Backup & Launch</span>
+      <!-- Right controls (shown next to brand on mobile, at the end on desktop) -->
+      <div class="flex items-center gap-1.5 lg:order-3 shrink-0">
+        <button id="header-outlook-chip" type="button" class="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors" title="Outlook connection">
+          <span id="header-outlook-dot" class="w-2 h-2 rounded-full bg-stone-400"></span>
+          <span id="header-outlook-label">Outlook off</span>
         </button>
 
-        <!-- Clean Print Planner Button -->
-        <button 
-          id="print-sheet-btn" 
-          type="button" 
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors border border-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          title="Print a clean paper copy of your current planner view"
-        >
-          <span>🖨️</span>
-          <span class="hidden sm:inline">Print</span>
-        </button>
-
-        <!-- Cozy Evening Theme Toggle Button -->
-        <button 
-          id="theme-toggle-btn" 
-          type="button" 
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-100/70 hover:bg-amber-200/70 text-amber-950 transition-colors border border-amber-300/70 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          title="Switch between Warm Daylight and Cozy Evening Mode"
-        >
+        <button id="theme-toggle-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-100/70 hover:bg-amber-200/70 text-amber-950 border border-amber-300/70 transition-colors" title="Switch to Evening Mode" aria-label="Toggle evening mode">
           <span id="theme-icon">🌙</span>
-          <span id="theme-label" class="hidden sm:inline">Evening Mode</span>
         </button>
 
-        <!-- Export CSV Backup Button -->
-        <button 
-          id="export-csv-btn" 
-          type="button" 
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 transition-colors border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          title="Export all Month, Week & Day tasks to CSV"
-        >
-          <span>📥</span>
-          <span class="hidden sm:inline">Export CSV</span>
-        </button>
-
-        <!-- Audio Mute Toggle Button -->
-        <button 
-          id="sound-toggle-btn" 
-          type="button" 
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors border border-stone-200 focus:outline-none focus:ring-2 focus:ring-amber-400"
-          title="Toggle celebratory sounds"
-        >
+        <button id="sound-toggle-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors" title="Mute sounds" aria-label="Toggle sounds" aria-pressed="true">
           <span id="sound-icon">🔊</span>
-          <span id="sound-label" class="hidden sm:inline">Sound On</span>
         </button>
+
+        <!-- Data menu: export / backup / print -->
+        <div class="relative">
+          <button id="data-menu-btn" type="button" class="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors" aria-haspopup="true" aria-expanded="false">
+            <span>💾</span>
+            <span class="hidden sm:inline">Data</span>
+            <span class="text-[10px]">▾</span>
+          </button>
+          <div id="data-menu" class="hidden absolute right-0 mt-2 w-56 warm-card rounded-2xl p-1.5 z-50 text-xs" role="menu">
+            <button type="button" data-action="export-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📤</span>Download backup (.json)</button>
+            <button type="button" data-action="import-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📂</span>Restore backup…</button>
+            <button type="button" data-action="export-csv" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📥</span>Export to CSV</button>
+            <button type="button" data-action="export-ics" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📅</span>Export calendar (.ics)</button>
+            <div class="h-px bg-stone-100 my-1"></div>
+            <button type="button" data-action="print" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">🖨️</span>Print this view</button>
+          </div>
+          <input id="import-json-input" type="file" accept=".json,application/json" class="hidden">
+        </div>
       </div>
 
+      <!-- Navigation tabs: full-width second row on mobile, centred on desktop -->
+      <nav class="w-full lg:w-auto lg:order-2 flex items-center gap-1 bg-[#F3EDE2] p-1 rounded-2xl border border-[#E6DEC8] overflow-x-auto no-scrollbar" aria-label="Planner views">
+        <button type="button" data-view="day" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>☀️</span><span>Day</span></button>
+        <button type="button" data-view="week" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📅</span><span>Week</span></button>
+        <button type="button" data-view="month" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>🗓️</span><span>Month</span></button>
+        <button type="button" data-view="analysis" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📊</span><span>Insights</span></button>
+        <button type="button" data-view="reminders" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 relative">
+          <span>🔔</span><span>Reminders</span>
+          <span id="nav-reminder-badge" class="w-2 h-2 rounded-full bg-rose-500 absolute top-1 right-1 hidden"></span>
+        </button>
+        <button type="button" data-view="outlook" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📧</span><span>Outlook</span></button>
+      </nav>
     </div>
   </header>
 
-  <!-- Main Workspace -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- Warm Human Welcome & Daily Rhythm Banner -->
+    <!-- Hero -->
     <section id="hero-banner-section" class="bg-gradient-to-br from-[#FFF9EE] via-[#FFFDF9] to-[#FCEEE9] rounded-3xl p-5 sm:p-7 border border-[#EFE3D0] shadow-sm transition-colors duration-300">
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        
-        <!-- Left: Circular Progress Meter & Warm Human Greeting -->
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+
+        <div class="flex items-center gap-5 min-w-0">
           <div class="relative w-24 h-24 flex items-center justify-center shrink-0 bg-white rounded-full shadow-inner border border-amber-100">
-            <svg class="w-24 h-24" viewBox="0 0 100 100">
+            <svg class="w-24 h-24" viewBox="0 0 100 100" aria-hidden="true">
               <circle class="text-amber-100/80" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
               <circle id="progress-circle" class="text-amber-500 progress-ring-circle" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span id="progress-percent" class="text-xl font-extrabold text-stone-900 leading-none">0%</span>
-              <span class="text-[9px] uppercase font-bold text-stone-400 mt-0.5 tracking-wider">Flow</span>
+              <span id="progress-percent" class="text-xl font-extrabold text-stone-900 leading-none tabular-nums">0%</span>
+              <span class="text-[9px] uppercase font-bold text-stone-400 mt-0.5 tracking-wider">Today</span>
             </div>
           </div>
 
-          <div class="space-y-1.5">
-            <div class="flex flex-wrap items-center gap-2">
-              <span id="live-month-pill" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                🗓️ Current Month Detected
-              </span>
-              <span id="rank-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100/80 text-rose-900 border border-rose-200">
-                <span id="rank-emoji">🦥</span>
-                <span id="rank-text">Cozy Start</span>
-              </span>
+          <div class="space-y-1.5 min-w-0">
+            <span id="rank-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100/80 text-rose-900 border border-rose-200">
+              <span id="rank-emoji">🌱</span>
+              <span id="rank-text">Cozy Start</span>
+            </span>
+
+            <div class="flex items-baseline gap-2 flex-wrap">
+              <h1 id="view-greeting" class="text-xl sm:text-2xl font-bold font-serif-human text-stone-900">Good morning, friend ☀️</h1>
+              <button id="edit-name-btn" type="button" class="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline decoration-amber-400/60">Personalize</button>
             </div>
 
-            <div class="flex items-center gap-2 flex-wrap">
-              <h1 id="view-greeting" class="text-xl sm:text-2xl font-bold font-serif-human text-stone-900">
-                Good morning, friend ☀️
-              </h1>
-              <button id="edit-name-btn" type="button" class="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline decoration-amber-400/60">
-                Personalize name
-              </button>
-            </div>
-
-            <!-- Inline Name Editor (hidden by default, replaces prompt()) -->
-            <div id="name-editor-row" class="hidden flex items-center gap-2 pt-1">
-              <input id="user-name-input" type="text" placeholder="Your first name..." class="px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
-              <button id="save-name-btn" type="button" class="px-2.5 py-1 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">Save</button>
-            </div>
+            <form id="name-editor-row" class="hidden items-center gap-2 pt-1">
+              <input id="user-name-input" type="text" placeholder="Your first name…" maxlength="40" class="px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <button id="save-name-btn" type="submit" class="px-2.5 py-1 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">Save</button>
+            </form>
 
             <p id="rank-desc" class="text-xs sm:text-sm text-stone-600 max-w-xl leading-relaxed">
-              Take a deep breath. You don't have to finish everything at once—just pick one small thing that makes today feel lighter.
+              Take a deep breath. Just pick one small thing that makes today feel lighter.
             </p>
           </div>
         </div>
 
-        <!-- Right: Warm Human Stats & Energy Check-in -->
-        <div class="flex flex-col gap-3">
-          <div class="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+        <div class="flex flex-col gap-3 lg:w-[420px] shrink-0">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
             <div class="bg-white/90 p-3 rounded-2xl border border-[#EFE3D0] shadow-xs">
               <div class="text-[10px] font-bold uppercase text-stone-400">Planned</div>
-              <div id="stat-total" class="text-xl font-black text-stone-800">0</div>
+              <div id="stat-total" class="text-xl font-black text-stone-800 tabular-nums">0</div>
             </div>
             <div class="bg-emerald-50/90 p-3 rounded-2xl border border-emerald-200/80 shadow-xs">
               <div class="text-[10px] font-bold uppercase text-emerald-700">Done</div>
-              <div id="stat-completed" class="text-xl font-black text-emerald-700">0</div>
+              <div id="stat-completed" class="text-xl font-black text-emerald-700 tabular-nums">0</div>
             </div>
             <div class="bg-amber-50/90 p-3 rounded-2xl border border-amber-200/80 shadow-xs">
               <div class="text-[10px] font-bold uppercase text-amber-800">To Do</div>
-              <div id="stat-pending" class="text-xl font-black text-amber-800">0</div>
+              <div id="stat-pending" class="text-xl font-black text-amber-800 tabular-nums">0</div>
             </div>
             <div class="bg-rose-50/90 p-3 rounded-2xl border border-rose-200/80 shadow-xs">
               <div class="text-[10px] font-bold uppercase text-rose-700">Nudges</div>
-              <div id="stat-reminders" class="text-xl font-black text-rose-700">0</div>
+              <div id="stat-reminders" class="text-xl font-black text-rose-700 tabular-nums">0</div>
             </div>
           </div>
 
-          <!-- Human Energy / Mood Selector -->
-          <div class="flex items-center justify-between gap-2 bg-white/80 px-3 py-2 rounded-2xl border border-[#EFE3D0] text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-white/80 px-3 py-2 rounded-2xl border border-[#EFE3D0] text-xs">
             <span class="font-semibold text-stone-600">How's your energy?</span>
-            <div class="flex items-center gap-1" role="radiogroup" aria-label="Daily energy level">
-              <button type="button" data-mood="gentle" class="mood-btn px-2 py-1 rounded-lg hover:bg-amber-50 text-stone-600 transition-all" title="Taking it slow">🌱 Gentle</button>
-              <button type="button" data-mood="steady" class="mood-btn px-2 py-1 rounded-lg bg-amber-100 font-bold text-amber-900 transition-all" title="Steady flow">☕ Steady</button>
-              <button type="button" data-mood="spark" class="mood-btn px-2 py-1 rounded-lg hover:bg-amber-50 text-stone-600 transition-all" title="Feeling creative">✨ Inspired</button>
-              <button type="button" data-mood="fire" class="mood-btn px-2 py-1 rounded-lg hover:bg-amber-50 text-stone-600 transition-all" title="High energy">🔥 Focused</button>
+            <div class="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="Daily energy level">
+              <button type="button" data-mood="gentle" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Taking it slow">🌱 Gentle</button>
+              <button type="button" data-mood="steady" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Steady flow">☕ Steady</button>
+              <button type="button" data-mood="spark" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Feeling creative">✨ Inspired</button>
+              <button type="button" data-mood="fire" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="High energy">🔥 Focused</button>
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- Linear progress bar -->
       <div class="mt-5 pt-3.5 border-t border-[#EFE3D0]/80">
         <div class="flex justify-between items-center text-xs text-stone-600 mb-1.5">
-          <span class="font-medium">Your Gentle Progress Bar</span>
-          <span id="progress-text" class="font-bold text-amber-800">0% (0 of 0 tasks)</span>
+          <span class="font-medium">Today's progress</span>
+          <span id="progress-text" class="font-bold text-amber-800 tabular-nums">0 of 0 done</span>
         </div>
         <div class="w-full bg-[#EFE6D8] rounded-full h-2.5 overflow-hidden">
           <div id="progress-bar" class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 h-2.5 rounded-full transition-all duration-500 w-0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
@@ -322,729 +178,436 @@
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 1: DAY PLANNER VIEW -->
-    <!-- ========================================== -->
-    <section id="view-day-container" class="space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- ===================== DAY VIEW ===================== -->
+    <section id="view-day-container" class="view-section">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-        <!-- Left 2 Cols: Daily Story & Task List -->
         <div class="lg:col-span-2 space-y-5">
-          
-          <!-- Day Navigator & Filter Bar -->
+
+          <!-- Day navigator & filters -->
           <div class="warm-card p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
-              <button id="day-prev-btn" type="button" class="w-9 h-9 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-amber-50 text-stone-700 font-bold transition-colors">&larr;</button>
-              <div>
-                <span id="day-current-label" class="text-sm sm:text-base font-bold font-serif-human text-stone-900 block">Today</span>
-                <span class="text-[11px] text-amber-700 font-semibold cursor-pointer hover:underline" id="jump-today-btn">Return to Today</span>
+            <div class="flex items-center gap-2.5 min-w-0">
+              <button id="day-prev-btn" type="button" class="w-9 h-9 shrink-0 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-amber-50 text-stone-700 font-bold transition-colors" aria-label="Previous day">&larr;</button>
+              <div class="min-w-0 sm:min-w-[220px] text-center">
+                <span id="day-current-label" class="text-sm sm:text-base font-bold font-serif-human text-stone-900 block truncate">Today</span>
+                <button type="button" id="jump-today-btn" class="text-[11px] text-amber-700 font-semibold hover:underline">Back to today</button>
               </div>
-              <button id="day-next-btn" type="button" class="w-9 h-9 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-amber-50 text-stone-700 font-bold transition-colors">&rarr;</button>
+              <button id="day-next-btn" type="button" class="w-9 h-9 shrink-0 rounded-xl border border-stone-200 flex items-center justify-center hover:bg-amber-50 text-stone-700 font-bold transition-colors" aria-label="Next day">&rarr;</button>
             </div>
 
-            <!-- Filter Tabs & Clear Done -->
             <div class="flex items-center gap-2">
               <div class="flex gap-1 bg-stone-100 p-1 rounded-xl" role="tablist">
-                <button type="button" data-filter="all" class="filter-tab px-2.5 py-1 text-xs font-bold bg-stone-800 text-white rounded-lg transition-all">All (<span id="count-all">0</span>)</button>
-                <button type="button" data-filter="active" class="filter-tab px-2.5 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-200/60 rounded-lg transition-all">Active (<span id="count-active">0</span>)</button>
-                <button type="button" data-filter="completed" class="filter-tab px-2.5 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-200/60 rounded-lg transition-all">Done (<span id="count-completed">0</span>)</button>
+                <button type="button" data-filter="all" class="filter-tab px-2.5 py-1 text-xs rounded-lg transition-all">All <span id="count-all" class="tabular-nums">0</span></button>
+                <button type="button" data-filter="active" class="filter-tab px-2.5 py-1 text-xs rounded-lg transition-all">Active <span id="count-active" class="tabular-nums">0</span></button>
+                <button type="button" data-filter="completed" class="filter-tab px-2.5 py-1 text-xs rounded-lg transition-all">Done <span id="count-completed" class="tabular-nums">0</span></button>
               </div>
-              <button id="clear-completed-btn" type="button" class="text-xs text-stone-400 hover:text-rose-600 font-semibold px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors">Clear Done</button>
+              <button id="clear-completed-btn" type="button" class="text-xs text-stone-400 hover:text-rose-600 font-semibold px-2 py-1 rounded-lg hover:bg-rose-50 transition-colors">Clear done</button>
             </div>
           </div>
 
-          <!-- Daily Intention / Gratitude Strip -->
-          <div class="warm-card p-4 rounded-2xl bg-gradient-to-r from-amber-50/50 to-orange-50/30 flex items-center gap-3">
-            <span class="text-xl">🌿</span>
-            <div class="flex-1">
-              <label for="daily-intention-input" class="block text-[11px] font-bold uppercase tracking-wider text-amber-800">Today's Small Intention or Gratitude</label>
-              <input 
-                id="daily-intention-input" 
-                type="text" 
-                placeholder="Write a kind thought for yourself today (e.g., 'Drink water and finish the slides without rushing')..." 
-                class="w-full bg-transparent text-xs sm:text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none mt-0.5 font-medium"
-              >
+          <!-- Intention -->
+          <div class="warm-card p-4 rounded-2xl flex items-center gap-3">
+            <span class="text-xl leading-none">🌿</span>
+            <div class="flex-1 min-w-0">
+              <label for="daily-intention-input" class="block text-[11px] font-bold uppercase tracking-wider text-amber-800">Today's small intention</label>
+              <input id="daily-intention-input" type="text" placeholder="A kind thought for yourself today…" class="w-full bg-transparent text-xs sm:text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none mt-0.5 font-medium">
             </div>
           </div>
 
-          <!-- Instant Search & All-Dates Filter Bar -->
-          <div class="warm-card p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2 flex-1 min-w-[200px]">
-              <span class="text-sm">🔍</span>
-              <input 
-                id="task-search-input" 
-                type="text" 
-                placeholder="Search plans by keyword, category, or sub-step..." 
-                class="w-full px-3 py-1.5 text-xs sm:text-sm rounded-xl border border-stone-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-              <button id="clear-search-btn" type="button" class="px-2.5 py-1.5 text-xs font-bold text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors">
-                Clear
-              </button>
+          <!-- Search -->
+          <div class="warm-card p-3.5 rounded-2xl flex flex-wrap items-center gap-3">
+            <div class="relative flex-1 min-w-[200px]">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
+              <input id="task-search-input" type="search" placeholder="Search plans, categories or steps…" class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-stone-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-amber-400">
             </div>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-stone-600 cursor-pointer select-none">
               <input id="search-all-dates-check" type="checkbox" class="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500">
-              <span>Search across all dates</span>
+              <span>All dates</span>
             </label>
           </div>
 
-                    <!-- Day Task List -->
+          <!-- Task list -->
           <div class="warm-card p-5 rounded-3xl min-h-[300px]">
             <div class="flex items-center justify-between mb-4 border-b border-stone-100 pb-3">
-              <div class="flex items-center gap-2">
-                <h3 class="text-sm font-bold font-serif-human text-stone-800">Your Plans for the Day</h3>
-                <span id="task-count" class="text-xs text-stone-400">0 tasks</span>
+              <div class="flex items-baseline gap-2">
+                <h3 class="text-sm font-bold font-serif-human text-stone-800">Your plans for the day</h3>
+                <span id="task-count" class="text-xs text-stone-400">0 plans</span>
               </div>
-              <span class="text-xs text-stone-400">Tap any item to celebrate finishing it</span>
+              <span class="text-xs text-stone-400 hidden sm:inline">Tap a plan to check it off</span>
             </div>
 
-            <ul id="task-list" class="space-y-3">
-              <!-- Rendered via JS -->
-            </ul>
+            <ul id="task-list" class="space-y-3"></ul>
 
-            <div id="empty-state" class="text-center py-12 text-stone-400">
+            <div id="empty-state" class="text-center py-12 text-stone-400 hidden">
               <div class="text-4xl mb-2">☕</div>
               <p class="text-sm font-bold font-serif-human text-stone-700">A peaceful, open day!</p>
-              <p class="text-xs text-stone-400 mt-1">Nothing scheduled for this date yet. Add a plan on the right whenever you feel ready.</p>
+              <p class="text-xs text-stone-400 mt-1">Nothing here yet. Add a plan whenever you feel ready.</p>
             </div>
           </div>
-
         </div>
 
-        <!-- Right 1 Col: Add Task & Quick Outlook Sync -->
+        <!-- Right column -->
         <div class="space-y-5">
-          
-          <!-- Unified Add Task Form -->
-          <div class="warm-card p-5 rounded-3xl">
-            <h3 class="text-base font-bold font-serif-human text-stone-900 mb-1 flex items-center gap-2">
-              <span>✍️</span>
-              <span>Jot Down a Plan</span>
-            </h3>
-            <p class="text-xs text-stone-500 mb-4">Automatically flows into your Day, Week, and Month calendars.</p>
+
+          <div id="task-form-card" class="warm-card p-5 rounded-3xl">
+            <h3 class="text-base font-bold font-serif-human text-stone-900 mb-1 flex items-center gap-2"><span>✍️</span><span>Jot down a plan</span></h3>
+            <p class="text-xs text-stone-500 mb-4">Shows up in your Day, Week and Month views.</p>
 
             <form id="task-form" class="space-y-3.5">
               <div>
                 <label for="task-input" class="block text-xs font-bold text-stone-600 mb-1">What would you like to do?</label>
-                <input 
-                  type="text" 
-                  id="task-input" 
-                  placeholder="e.g., Call Mom, Finish design review..." 
-                  required 
-                  class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-[#FAF8F5]"
-                >
+                <input type="text" id="task-input" placeholder="e.g., Call Mom, finish design review…" required maxlength="200" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-[#FAF8F5]">
               </div>
 
-              <!-- Optional Sub-Steps Input -->
               <div>
-                <label for="task-subtasks-input" class="block text-xs font-bold text-stone-600 mb-1">Break into small steps <span class="font-normal text-stone-400">(optional, comma-separated)</span></label>
-                <input 
-                  type="text" 
-                  id="task-subtasks-input" 
-                  placeholder="e.g., Outline slides, Add charts, Send draft" 
-                  class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]"
-                >
+                <label for="task-subtasks-input" class="block text-xs font-bold text-stone-600 mb-1">Small steps <span class="font-normal text-stone-400">(optional, comma-separated)</span></label>
+                <input type="text" id="task-subtasks-input" placeholder="Outline, add charts, send draft" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
               </div>
 
-              <!-- Date & Time Row -->
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label for="task-date-input" class="block text-xs font-bold text-stone-600 mb-1">Date</label>
-                  <input 
-                    type="date" 
-                    id="task-date-input" 
-                    required 
-                    class="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]"
-                  >
+                  <input type="date" id="task-date-input" required class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
                 </div>
                 <div>
                   <label for="task-time-input" class="block text-xs font-bold text-stone-600 mb-1">Time</label>
-                  <input 
-                    type="time" 
-                    id="task-time-input" 
-                    value="10:00" 
-                    class="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]"
-                  >
+                  <input type="time" id="task-time-input" value="10:00" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
                 </div>
               </div>
 
-              <!-- Category Row -->
-              <div>
-                <label for="task-category-select" class="block text-xs font-bold text-stone-600 mb-1">Life Area</label>
-                <select id="task-category-select" class="w-full px-2.5 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-                  <option value="Work">💼 Meaningful Work</option>
-                  <option value="Personal">🏠 Home & Personal</option>
-                  <option value="Health">🥗 Body & Mind Care</option>
-                  <option value="Learning">📚 Curiosity & Growth</option>
-                </select>
-              </div>
-
-              <!-- Recurrence Row -->
-              <div>
-                <label for="task-recur-select" class="block text-xs font-bold text-stone-600 mb-1">Repeat Rhythm</label>
-                <select id="task-recur-select" class="w-full px-2.5 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-                  <option value="none">🎯 Just Once</option>
-                  <option value="daily">🔁 Daily Ritual (Next 7 Days)</option>
-                  <option value="weekly">📅 Weekly Rhythm (Rest of Month)</option>
-                </select>
-              </div>
-
-              <!-- Priority Selector -->
-              <div>
-                <span class="block text-xs font-bold text-stone-600 mb-1">Energy & Priority</span>
-                <div class="grid grid-cols-3 gap-1.5" role="radiogroup">
-                  <button type="button" data-priority="high" class="priority-chip px-2 py-1.5 rounded-lg border border-rose-200 bg-white text-rose-700 text-xs font-medium transition-all text-center">🔥 High</button>
-                  <button type="button" data-priority="medium" class="priority-chip px-2 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-xs font-bold transition-all text-center shadow-xs">⚡ Medium</button>
-                  <button type="button" data-priority="low" class="priority-chip px-2 py-1.5 rounded-lg border border-emerald-200 bg-white text-emerald-700 text-xs font-medium transition-all text-center">☕ Chill</button>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="task-category-select" class="block text-xs font-bold text-stone-600 mb-1">Life area</label>
+                  <select id="task-category-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                    <option value="Work">💼 Work</option>
+                    <option value="Personal">🏠 Personal</option>
+                    <option value="Health">🥗 Health</option>
+                    <option value="Learning">📚 Learning</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="task-duration-select" class="block text-xs font-bold text-stone-600 mb-1">Length</label>
+                  <select id="task-duration-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                    <option value="15">15 min</option>
+                    <option value="30">30 min</option>
+                    <option value="60" selected>1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                  </select>
                 </div>
               </div>
 
-              <!-- Reminder Checkbox -->
-              <div class="flex items-center gap-2 p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/70">
+              <div>
+                <label for="task-recur-select" class="block text-xs font-bold text-stone-600 mb-1">Repeat</label>
+                <select id="task-recur-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                  <option value="none">🎯 Just once</option>
+                  <option value="daily">🔁 Daily for 7 days</option>
+                  <option value="weekly">📅 Weekly for 4 weeks</option>
+                </select>
+              </div>
+
+              <div>
+                <span class="block text-xs font-bold text-stone-600 mb-1">Priority</span>
+                <div class="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Priority">
+                  <button type="button" data-priority="high" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">🔥 High</button>
+                  <button type="button" data-priority="medium" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">⚡ Medium</button>
+                  <button type="button" data-priority="low" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">☕ Chill</button>
+                </div>
+              </div>
+
+              <label for="task-reminder-check" class="flex items-center gap-2 p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/70 cursor-pointer">
                 <input type="checkbox" id="task-reminder-check" checked class="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500">
-                <label for="task-reminder-check" class="text-xs font-semibold text-amber-950 cursor-pointer">
-                  Give me a gentle reminder chime
-                </label>
-              </div>
+                <span class="text-xs font-semibold text-amber-950">Remind me 15 minutes before</span>
+              </label>
 
-              <!-- Auto-Sync to Outlook Calendar Checkbox -->
-              <div class="flex items-center justify-between gap-2 p-2.5 bg-sky-50/80 rounded-xl border border-sky-200/80">
-                <div class="flex items-center gap-2">
+              <label for="task-autosync-check" class="flex items-center justify-between gap-2 p-2.5 bg-sky-50/80 rounded-xl border border-sky-200/80 cursor-pointer">
+                <span class="flex items-center gap-2">
                   <input type="checkbox" id="task-autosync-check" checked class="w-4 h-4 text-sky-600 rounded border-stone-300 focus:ring-sky-500">
-                  <label for="task-autosync-check" class="text-xs font-semibold text-sky-950 cursor-pointer">
-                    Auto-sync straight to Outlook Calendar
-                  </label>
-                </div>
-                <span id="form-sync-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">Auto</span>
-              </div>
+                  <span class="text-xs font-semibold text-sky-950">Add to my Outlook calendar</span>
+                </span>
+                <span id="form-sync-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 whitespace-nowrap">Not connected</span>
+              </label>
 
-              <!-- Submit button with original id and text -->
-              <button 
-                type="submit" 
-                id="add-btn" 
-                class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-amber-200/80 flex items-center justify-center gap-2"
-              >
-                <span>Add Task</span>
+              <button type="submit" id="add-btn" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-amber-200/80">
+                Add plan
               </button>
             </form>
           </div>
 
-          <!-- Gentle Focus Timer (Pomodoro Companion) -->
-          <div class="warm-card p-5 rounded-3xl bg-gradient-to-br from-[#FFFBF4] via-white to-[#FDF3EC] border-[#EFE3D0]">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2">
-                <span>🍅</span>
-                <span>Gentle Focus Timer</span>
-              </h3>
-              <span id="focus-sessions-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                0 sessions today
-              </span>
+          <!-- Focus timer -->
+          <div id="focus-card" class="warm-card p-5 rounded-3xl">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>🍅</span><span>Focus timer</span></h3>
+              <span id="focus-sessions-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 whitespace-nowrap">0 sessions today</span>
             </div>
 
             <p id="focus-active-task-label" class="text-xs text-stone-600 truncate mb-3 bg-[#FAF6F0] px-3 py-1.5 rounded-xl border border-[#EFE3D0]">
-              🎯 Focusing on: <span class="font-semibold text-stone-800">Any task on your list (or click ▶️ Focus)</span>
+              🎯 <span class="font-semibold text-stone-800">Any task (or press ▶ on a plan)</span>
             </p>
 
-            <!-- Preset Mode Buttons -->
-            <div class="grid grid-cols-3 gap-1.5 mb-4 text-xs" role="group" aria-label="Timer duration presets">
-              <button type="button" data-minutes="25" class="timer-preset-btn py-1.5 px-2 rounded-xl font-bold bg-amber-500 text-white shadow-xs transition-all">
-                25m Focus
-              </button>
-              <button type="button" data-minutes="15" class="timer-preset-btn py-1.5 px-2 rounded-xl font-semibold bg-stone-100 text-stone-700 hover:bg-amber-50 transition-all">
-                15m Sprint
-              </button>
-              <button type="button" data-minutes="5" class="timer-preset-btn py-1.5 px-2 rounded-xl font-semibold bg-stone-100 text-stone-700 hover:bg-amber-50 transition-all">
-                5m Breather
-              </button>
+            <div class="grid grid-cols-3 gap-1.5 mb-4 text-xs" role="group" aria-label="Timer presets">
+              <button type="button" data-minutes="25" class="timer-preset-btn py-1.5 rounded-xl transition-all">25m Focus</button>
+              <button type="button" data-minutes="15" class="timer-preset-btn py-1.5 rounded-xl transition-all">15m Sprint</button>
+              <button type="button" data-minutes="5" class="timer-preset-btn py-1.5 rounded-xl transition-all">5m Break</button>
             </div>
 
-            <!-- Big Countdown Display & Linear Bar -->
-            <div class="text-center py-3 bg-[#FAF6F0] rounded-2xl border border-[#EFE3D0] mb-4">
-              <div id="focus-timer-display" class="text-4xl font-extrabold font-serif-human text-stone-900 tracking-tight">
-                25:00
-              </div>
-              <div id="focus-timer-status" class="text-[11px] font-semibold text-amber-800 mt-1">
-                Ready when you are — breathe and begin
-              </div>
-              <div class="w-4/5 mx-auto bg-stone-200/80 rounded-full h-1.5 mt-2.5 overflow-hidden">
+            <div class="text-center py-4 bg-[#FAF6F0] rounded-2xl border border-[#EFE3D0] mb-4">
+              <div id="focus-timer-display" class="text-4xl font-extrabold font-serif-human text-stone-900 tracking-tight tabular-nums">25:00</div>
+              <div id="focus-timer-status" class="text-[11px] font-semibold text-amber-800 mt-1 px-3">Ready when you are</div>
+              <div class="w-4/5 mx-auto bg-stone-200/80 rounded-full h-1.5 mt-3 overflow-hidden">
                 <div id="focus-timer-bar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-300 w-0"></div>
               </div>
             </div>
 
-            <!-- Timer Action Buttons -->
-            <div class="flex items-center gap-2">
-              <button id="timer-start-btn" type="button" class="flex-1 py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm">
-                Start Focus
-              </button>
-              <button id="timer-reset-btn" type="button" class="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors">
-                Reset
-              </button>
-              <button id="timer-finish-btn" type="button" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors" title="Complete focus session right now">
-                ✓ Done
-              </button>
+            <div class="grid grid-cols-[1fr_auto_auto] gap-2">
+              <button id="timer-start-btn" type="button" class="py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm">Start</button>
+              <button id="timer-reset-btn" type="button" class="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors">Reset</button>
+              <button id="timer-finish-btn" type="button" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors" title="Finish this session now">✓ Done</button>
             </div>
           </div>
 
-                    <!-- Quick Outlook Card on Day View -->
-          <div class="warm-card p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/50 border-sky-200/80 text-xs">
+          <!-- Quick Outlook -->
+          <div id="quick-outlook-card" class="warm-card p-4 rounded-2xl text-xs">
             <div class="font-bold flex items-center justify-between mb-1.5 text-sky-950">
-              <span class="flex items-center gap-1.5"><span>📧</span><span>Outlook Companion</span></span>
-              <span id="quick-outlook-status" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-semibold">Ready</span>
+              <span class="flex items-center gap-1.5"><span>📧</span><span>Outlook</span></span>
+              <span id="quick-outlook-status" class="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold truncate max-w-[60%]">Not connected</span>
             </div>
-            <p class="text-stone-600 leading-relaxed mb-3">
-              Want these tasks inside your Outlook inbox or Outlook Calendar?
-            </p>
-            <div class="flex gap-2">
-              <button id="quick-email-outlook-btn" type="button" class="flex-1 py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors text-center">
-                Send to Outlook Inbox
-              </button>
-              <button id="quick-ics-outlook-btn" type="button" class="py-2 px-3 bg-white hover:bg-sky-50 text-sky-800 border border-sky-200 font-bold rounded-xl transition-colors">
-                .ICS Calendar
-              </button>
+            <p id="quick-outlook-desc" class="text-stone-600 leading-relaxed mb-3">Connect your Microsoft account to put plans on your calendar and email yourself the day.</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="quick-email-outlook-btn" type="button" class="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">Email today</button>
+              <button id="quick-pull-outlook-btn" type="button" class="py-2 px-3 bg-white hover:bg-sky-50 text-sky-800 border border-sky-200 font-bold rounded-xl transition-colors">Import events</button>
             </div>
           </div>
-
         </div>
-
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 2: WEEK PLANNER VIEW (Live Auto-Detected Week) -->
-    <!-- ========================================== -->
-    <section id="view-week-container" class="space-y-4 hidden">
+    <!-- ===================== WEEK VIEW ===================== -->
+    <section id="view-week-container" class="view-section space-y-4 hidden">
       <div class="warm-card p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 class="text-base font-bold font-serif-human text-stone-900">Your Weekly Flow</h3>
-          <p id="week-range-subtitle" class="text-xs text-stone-500">Automatically synced to your current week</p>
+          <h3 class="text-base font-bold font-serif-human text-stone-900">Your weekly flow</h3>
+          <p id="week-range-subtitle" class="text-xs text-stone-500">This week</p>
         </div>
         <div class="flex items-center gap-2 text-xs">
-          <button id="week-prev-btn" type="button" class="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">&larr; Prev Week</button>
-          <button id="week-today-btn" type="button" class="px-3 py-1.5 bg-amber-100 text-amber-900 font-bold rounded-xl border border-amber-200">This Week</button>
-          <button id="week-next-btn" type="button" class="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">Next Week &rarr;</button>
+          <button id="week-prev-btn" type="button" class="h-8 px-3 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">&larr; Prev</button>
+          <button id="week-today-btn" type="button" class="h-8 px-3 bg-amber-100 text-amber-900 font-bold rounded-xl border border-amber-200">This week</button>
+          <button id="week-next-btn" type="button" class="h-8 px-3 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">Next &rarr;</button>
         </div>
       </div>
-
-      <!-- 7 Days Grid Column Layout -->
-      <div id="week-columns-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <!-- Rendered by JS -->
-      </div>
+      <div id="week-columns-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3"></div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 3: MONTH PLANNER VIEW (Live Auto-Detected Month) -->
-    <!-- ========================================== -->
-    <section id="view-month-container" class="space-y-4 hidden">
-      <div class="warm-card p-5 rounded-3xl">
-        
+    <!-- ===================== MONTH VIEW ===================== -->
+    <section id="view-month-container" class="view-section hidden">
+      <div class="warm-card p-4 sm:p-5 rounded-3xl">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-stone-100">
           <div>
-            <div class="flex items-center gap-2">
-              <h3 id="month-title-heading" class="text-lg font-bold font-serif-human text-stone-900">Current Month</h3>
-              <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">Auto-Detected</span>
-            </div>
-            <p class="text-xs text-stone-500 mt-0.5">Click any date square to jump into that day's plans</p>
+            <h3 id="month-title-heading" class="text-lg font-bold font-serif-human text-stone-900">This month</h3>
+            <p class="text-xs text-stone-500 mt-0.5">Click a date to open that day</p>
           </div>
           <div class="flex items-center gap-2 text-xs">
-            <button id="month-prev-btn" type="button" class="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">&larr; Prev</button>
-            <button id="month-today-btn" type="button" class="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold border border-amber-200">Current Month</button>
-            <button id="month-next-btn" type="button" class="px-3 py-1.5 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">Next &rarr;</button>
+            <button id="month-prev-btn" type="button" class="h-8 px-3 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">&larr; Prev</button>
+            <button id="month-today-btn" type="button" class="h-8 px-3 rounded-xl bg-amber-100 text-amber-900 font-bold border border-amber-200">This month</button>
+            <button id="month-next-btn" type="button" class="h-8 px-3 rounded-xl border border-stone-200 hover:bg-amber-50 font-bold text-stone-700">Next &rarr;</button>
           </div>
         </div>
 
-        <!-- Month Calendar Grid -->
-        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">
-          <div>Sun</div>
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
+        <!-- Monday-first, to match the week view -->
+        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
         </div>
-
-        <div id="month-calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-2">
-          <!-- Rendered by JS -->
-        </div>
-
+        <div id="month-calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-2"></div>
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 4: ANALYSIS & REFLECTION -->
-    <!-- ========================================== -->
-    <section id="view-analysis-container" class="space-y-6 hidden">
-      
-      <!-- Top Analytics Metric Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+    <!-- ===================== INSIGHTS VIEW ===================== -->
+    <section id="view-analysis-container" class="view-section space-y-6 hidden">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="warm-card p-5 rounded-2xl">
-          <div class="text-xs font-bold text-stone-400 uppercase mb-1">Your Completion Flow</div>
-          <div id="analytics-velocity" class="text-2xl font-black text-amber-600">0%</div>
-          <p class="text-[11px] text-stone-500 mt-1">Plans completed across all dates</p>
+          <div class="text-[11px] font-bold text-stone-400 uppercase mb-1">Completion</div>
+          <div id="analytics-velocity" class="text-2xl font-black text-amber-600 tabular-nums">0%</div>
+          <p class="text-[11px] text-stone-500 mt-1">Of all plans, every date</p>
         </div>
-
         <div class="warm-card p-5 rounded-2xl">
-          <div class="text-xs font-bold text-stone-400 uppercase mb-1">High-Priority Care</div>
-          <div id="analytics-high-rate" class="text-2xl font-black text-rose-600">0%</div>
-          <p class="text-[11px] text-stone-500 mt-1">Important priorities wrapped up</p>
+          <div class="text-[11px] font-bold text-stone-400 uppercase mb-1">High priority</div>
+          <div id="analytics-high-rate" class="text-2xl font-black text-rose-600 tabular-nums">0%</div>
+          <p class="text-[11px] text-stone-500 mt-1">Important plans wrapped up</p>
         </div>
-
         <div class="warm-card p-5 rounded-2xl">
-          <div class="text-xs font-bold text-stone-400 uppercase mb-1">Main Life Focus</div>
-          <div id="analytics-top-category" class="text-2xl font-black text-stone-800">Work</div>
-          <p class="text-[11px] text-stone-500 mt-1">Where most of your energy goes</p>
+          <div class="text-[11px] font-bold text-stone-400 uppercase mb-1">Main focus</div>
+          <div id="analytics-top-category" class="text-2xl font-black text-stone-800">—</div>
+          <p class="text-[11px] text-stone-500 mt-1">Where most plans go</p>
         </div>
-
         <div class="warm-card p-5 rounded-2xl">
-          <div class="text-xs font-bold text-stone-400 uppercase mb-1">Gentle Nudges Set</div>
-          <div id="analytics-reminder-count" class="text-2xl font-black text-amber-700">0</div>
-          <p class="text-[11px] text-stone-500 mt-1">Upcoming reminders watching out for you</p>
+          <div class="text-[11px] font-bold text-stone-400 uppercase mb-1">Reminders</div>
+          <div id="analytics-reminder-count" class="text-2xl font-black text-amber-700 tabular-nums">0</div>
+          <p class="text-[11px] text-stone-500 mt-1">Still watching out for you</p>
         </div>
-
       </div>
 
-      <!-- Horizon Progress Comparison (Day vs Week vs Month) -->
       <div class="warm-card p-6 rounded-3xl">
-        <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2 mb-4">
-          <span>🧭</span>
-          <span>How Your Day, Week, and Month Connect</span>
-        </h4>
+        <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2 mb-4"><span>🧭</span><span>Day, week and month at a glance</span></h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5">
-              <span>☀️ Selected Day</span>
-              <span id="horizon-day-stat" class="text-amber-700">0/0 (0%)</span>
-            </div>
-            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
-              <div id="horizon-day-bar" class="bg-amber-500 h-2 rounded-full transition-all duration-500 w-0"></div>
-            </div>
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>☀️ Selected day</span><span id="horizon-day-stat" class="text-amber-700 tabular-nums">0/0</span></div>
+            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-day-bar" class="bg-amber-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
           <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5">
-              <span>📅 Current Week</span>
-              <span id="horizon-week-stat" class="text-rose-700">0/0 (0%)</span>
-            </div>
-            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
-              <div id="horizon-week-bar" class="bg-rose-500 h-2 rounded-full transition-all duration-500 w-0"></div>
-            </div>
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>📅 Shown week</span><span id="horizon-week-stat" class="text-rose-700 tabular-nums">0/0</span></div>
+            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-week-bar" class="bg-rose-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
           <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5">
-              <span>🗓️ Detected Month</span>
-              <span id="horizon-month-stat" class="text-emerald-700">0/0 (0%)</span>
-            </div>
-            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden">
-              <div id="horizon-month-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500 w-0"></div>
-            </div>
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>🗓️ Shown month</span><span id="horizon-month-stat" class="text-emerald-700 tabular-nums">0/0</span></div>
+            <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-month-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
         </div>
       </div>
 
-      <!-- Detailed Breakdown & Smart Insights -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <!-- Category Breakdown Bars -->
         <div class="warm-card p-6 rounded-3xl space-y-4">
-          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2">
-            <span>📊</span>
-            <span>Life Balance Across Categories</span>
-          </h4>
-
-          <div class="space-y-3 pt-2">
-            <div>
-              <div class="flex justify-between text-xs font-semibold mb-1">
-                <span class="text-stone-700">💼 Meaningful Work</span>
-                <span id="cat-work-stat" class="text-stone-500">0 tasks</span>
-              </div>
-              <div class="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden">
-                <div id="cat-work-bar" class="bg-amber-500 h-2.5 rounded-full transition-all duration-500 w-0"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-semibold mb-1">
-                <span class="text-stone-700">🏠 Home & Personal</span>
-                <span id="cat-personal-stat" class="text-stone-500">0 tasks</span>
-              </div>
-              <div class="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden">
-                <div id="cat-personal-bar" class="bg-rose-400 h-2.5 rounded-full transition-all duration-500 w-0"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-semibold mb-1">
-                <span class="text-stone-700">🥗 Body & Mind Care</span>
-                <span id="cat-health-stat" class="text-stone-500">0 tasks</span>
-              </div>
-              <div class="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden">
-                <div id="cat-health-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 w-0"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-semibold mb-1">
-                <span class="text-stone-700">📚 Curiosity & Growth</span>
-                <span id="cat-learning-stat" class="text-stone-500">0 tasks</span>
-              </div>
-              <div class="w-full bg-stone-100 rounded-full h-2.5 overflow-hidden">
-                <div id="cat-learning-bar" class="bg-purple-500 h-2.5 rounded-full transition-all duration-500 w-0"></div>
-              </div>
-            </div>
-          </div>
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>📊</span><span>Life balance</span></h4>
+          <div id="category-bars" class="space-y-3 pt-2"></div>
         </div>
-
-        <!-- Human Reflections -->
         <div class="warm-card p-6 rounded-3xl space-y-4">
-          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2">
-            <span>💡</span>
-            <span>Thoughtful Reflections on Your Schedule</span>
-          </h4>
-
-          <div id="insights-container" class="space-y-3 pt-2">
-            <!-- Rendered by JS -->
-          </div>
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>💡</span><span>Reflections</span></h4>
+          <div id="insights-container" class="space-y-3 pt-2"></div>
         </div>
-
       </div>
-
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 5: REMINDERS & GENTLE NUDGES -->
-    <!-- ========================================== -->
-    <section id="view-reminders-container" class="space-y-5 hidden">
+    <!-- ===================== REMINDERS VIEW ===================== -->
+    <section id="view-reminders-container" class="view-section space-y-5 hidden">
       <div class="warm-card p-5 rounded-3xl flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2">
-            <span>🔔</span>
-            <span>Your Gentle Reminders & Nudges</span>
-          </h3>
-          <p class="text-xs text-stone-500">Tasks you've asked Sunbeam to keep an eye on across your month and week</p>
+          <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>🔔</span><span>Reminders</span></h3>
+          <p class="text-xs text-stone-500">Sunbeam chimes 15 minutes before each of these while this tab is open.</p>
         </div>
-        <button 
-          id="test-reminder-alert-btn" 
-          type="button" 
-          class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl transition-colors border border-amber-200 flex items-center gap-1.5"
-        >
-          <span>⚡</span>
-          <span>Test Reminder Alarm</span>
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="enable-notifications-btn" type="button" class="h-9 px-4 bg-sky-50 hover:bg-sky-100 text-sky-900 text-xs font-bold rounded-xl transition-colors border border-sky-200">Enable desktop alerts</button>
+          <button id="test-reminder-alert-btn" type="button" class="h-9 px-4 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl transition-colors border border-amber-200">🔔 Test chime</button>
+        </div>
       </div>
 
       <div class="warm-card p-5 rounded-3xl">
-        <ul id="reminders-list" class="space-y-3">
-          <!-- Rendered by JS -->
-        </ul>
-        <div id="reminders-empty-state" class="text-center py-10 text-stone-400">
+        <ul id="reminders-list" class="space-y-3"></ul>
+        <div id="reminders-empty-state" class="text-center py-10 text-stone-400 hidden">
           <div class="text-3xl mb-2">🌼</div>
           <p class="text-sm font-bold font-serif-human text-stone-700">All quiet and peaceful!</p>
-          <p class="text-xs text-stone-400 mt-0.5">No pending reminders right now.</p>
+          <p class="text-xs text-stone-400 mt-0.5">No upcoming reminders.</p>
         </div>
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- VIEW 6: OUTLOOK EMAIL & CALENDAR SYNC HUB -->
-    <!-- ========================================== -->
-    <section id="view-outlook-container" class="space-y-6 hidden">
-      
-      <!-- Top Live Microsoft Graph Auto-Sync Card (For GitHub Pages) -->
-      <div class="warm-card p-6 rounded-3xl bg-gradient-to-br from-sky-50/90 via-white to-indigo-50/50 border-sky-200">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-sky-100">
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-600 text-white">⚡ Zero-Click Auto-Sync (GitHub Pages Ready)</span>
-              <span id="graph-connection-pill" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                Preview / Simulation Mode Active
-              </span>
-            </div>
-            <h3 class="text-xl font-bold font-serif-human text-stone-900 mt-1.5">Direct Microsoft Outlook Calendar & To-Do Link</h3>
-            <p class="text-xs sm:text-sm text-stone-600 mt-0.5 max-w-3xl">
-              Because you are hosting this on <strong>GitHub Pages</strong>, Sunbeam uses Microsoft's official <strong>MSAL.js + Graph API</strong> to push every new task straight into your Outlook Calendar automatically—no manual clicking or file importing required!
-            </p>
-          </div>
+    <!-- ===================== OUTLOOK VIEW ===================== -->
+    <section id="view-outlook-container" class="view-section space-y-6 hidden">
 
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="ms-graph-login-btn" type="button" class="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2">
-              <span>🔐</span>
-              <span id="ms-graph-login-label">Connect Microsoft Account</span>
-            </button>
-            <button id="ms-graph-sync-now-btn" type="button" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
-              <span>🔄</span>
-              <span>Sync All Tasks Now</span>
-            </button>
-            <button id="ms-graph-pull-btn" type="button" class="px-3.5 py-2.5 bg-white hover:bg-sky-50 text-sky-900 border border-sky-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
-              <span>📥</span>
-              <span>Pull Outlook Events</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Configuration Grid: Client ID + Detected GitHub Pages Redirect URI -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 pt-5">
-          
-          <div class="p-4 rounded-2xl bg-white border border-sky-100 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-sky-900">Step 1: Your GitHub Pages URL</span>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Auto-Detected</span>
-            </div>
-            <p class="text-xs text-stone-600 leading-relaxed">
-              When you upload this file to GitHub Pages, copy this exact URL into your Microsoft App's <strong>Single-Page Application Redirect URI</strong>:
-            </p>
-            <div class="flex items-center gap-2">
-              <input id="detected-redirect-uri" type="text" readonly class="flex-1 px-2.5 py-1.5 text-[11px] font-mono rounded-lg border border-stone-200 bg-stone-50 text-stone-700" value="https://your-username.github.io/sunbeam/">
-              <button id="copy-redirect-uri-btn" type="button" class="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold rounded-lg border border-sky-200">Copy</button>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-2xl bg-white border border-sky-100 space-y-3">
-            <div class="flex items-center justify-between">
-              <label for="ms-client-id-input" class="text-xs font-bold uppercase tracking-wider text-sky-900">Step 2: Microsoft Client ID</label>
-              <span class="text-[10px] font-semibold text-stone-400">Free Azure SPA ID</span>
-            </div>
-            <p class="text-xs text-stone-600 leading-relaxed">
-              Paste your Application (Client) ID from <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline font-semibold">Microsoft Entra / Azure</a> to switch from Simulation Mode to Live Graph Sync:
-            </p>
-            <div class="flex gap-2">
-              <input id="ms-client-id-input" type="text" placeholder="e.g. 00000000-0000-0000-0000-000000000000" class="flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
-              <button id="save-client-id-btn" type="button" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg">Save ID</button>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-2xl bg-white border border-sky-100 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-sky-900">Live Auto-Sync Activity Log</span>
-              <span id="synced-count-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">0 synced</span>
-            </div>
-            <div id="graph-sync-log" class="text-[11px] text-stone-600 space-y-1.5 max-h-28 overflow-y-auto font-mono bg-[#FAF8F5] p-2.5 rounded-xl border border-stone-200/80">
-              <div>✓ Auto-sync engine ready. Adding a task automatically pushes to your calendar.</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Fallback & Direct Inbox / ICS Tools (Preserved so all buttons remain available) -->
+      <!-- Connection -->
       <div class="warm-card p-6 rounded-3xl">
-        <h4 class="text-sm font-bold font-serif-human text-stone-900 mb-3">Additional Outlook Tools (Direct Inbox Digest & .ICS Export)</h4>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="space-y-4">
-            <div>
-              <label for="outlook-email-input" class="block text-xs font-bold text-stone-700 mb-1">Your Outlook Email Address</label>
-              <div class="flex gap-2">
-                <input 
-                  id="outlook-email-input" 
-                  type="email" 
-                  placeholder="yourname@outlook.com" 
-                  class="flex-1 px-3.5 py-2 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                >
-                <button id="save-outlook-email-btn" type="button" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors">
-                  Save Address
-                </button>
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex items-start gap-4 min-w-0">
+            <div class="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-2xl shrink-0">📧</div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-xl font-bold font-serif-human text-stone-900">Microsoft Outlook</h3>
+                <span id="graph-connection-pill" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">Not connected</span>
               </div>
-              <p id="outlook-saved-note" class="text-[11px] text-stone-500 mt-1">Saved locally in your browser.</p>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button id="outlook-web-compose-btn" type="button" class="py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
-                <span>🌐</span>
-                <span>Open in Outlook Web</span>
-              </button>
-              <button id="outlook-mailto-btn" type="button" class="py-2.5 px-4 bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                <span>✉️</span>
-                <span>Send via Outlook App</span>
-              </button>
+              <p id="graph-connection-desc" class="text-xs sm:text-sm text-stone-600 mt-1 max-w-2xl">Sign in to add plans to your Outlook calendar, bring your meetings into Sunbeam, and email yourself your plan.</p>
             </div>
           </div>
-
-          <div class="space-y-3">
-            <button id="download-ics-btn" type="button" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
-              <span>📅</span>
-              <span>Download .ICS File for Outlook Calendar</span>
-            </button>
-
-            <div class="p-3 rounded-2xl bg-[#FAF8F5] border border-stone-200">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-bold text-stone-700">Live Preview of Your Outlook Task Digest</span>
-                <button id="copy-digest-btn" type="button" class="text-[11px] font-bold text-sky-700 hover:underline">Copy Text</button>
-              </div>
-              <pre id="outlook-digest-preview" class="text-[10px] text-stone-600 whitespace-pre-wrap font-mono bg-white p-2.5 rounded-xl border border-stone-200 max-h-24 overflow-y-auto"></pre>
-            </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button id="ms-graph-login-btn" type="button" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm">Connect Microsoft account</button>
           </div>
+        </div>
+
+        <div id="outlook-connected-tools" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5 pt-5 border-t border-stone-100">
+          <button id="ms-graph-sync-now-btn" type="button" class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="text-sm font-bold text-emerald-900">🔄 Push unsynced plans</div>
+            <div id="sync-now-desc" class="text-[11px] text-stone-600 mt-0.5">Adds plans that aren't on your calendar yet</div>
+          </button>
+          <button id="ms-graph-pull-btn" type="button" class="p-4 rounded-2xl border border-sky-200 bg-sky-50/60 hover:bg-sky-50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <div class="text-sm font-bold text-sky-900">📥 Import Outlook events</div>
+            <div class="text-[11px] text-stone-600 mt-0.5">Brings in your meetings for the next 30 days</div>
+          </button>
+          <label class="p-4 rounded-2xl border border-stone-200 bg-[#FAF8F5] flex items-start gap-3 cursor-pointer">
+            <input id="auto-pull-check" type="checkbox" class="w-4 h-4 mt-0.5 rounded text-sky-600 border-stone-300 focus:ring-sky-500">
+            <span>
+              <span class="block text-sm font-bold text-stone-800">Import on startup</span>
+              <span class="block text-[11px] text-stone-600 mt-0.5">Refresh Outlook events each time Sunbeam opens</span>
+            </span>
+          </label>
         </div>
       </div>
 
-      <!-- Full JSON Backup, Restore & GitHub Pages 1-Click Deployment Kit -->
-      <div id="backup-launch-card" class="warm-card p-6 rounded-3xl bg-gradient-to-br from-emerald-50/70 via-white to-amber-50/50 border-emerald-200/80 space-y-5">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-emerald-100">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+        <!-- Email -->
+        <div class="warm-card p-6 rounded-3xl space-y-4">
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>✉️</span><span>Email your plan</span></h4>
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">🚀 Portable Data & GitHub Pages Kit</span>
-            <h3 class="text-xl font-bold font-serif-human text-stone-900 mt-1.5">Full JSON Backup, Restore & 1-Click `index.html` Download</h3>
-            <p class="text-xs sm:text-sm text-stone-600 mt-0.5 max-w-3xl">
-              Save or restore your entire planner state (tasks, sub-steps, intentions, and settings) as a `.json` file, or download a ready-to-host `index.html` file to drop straight into your GitHub repository.
-            </p>
+            <label for="outlook-email-input" class="block text-xs font-bold text-stone-700 mb-1">Send to</label>
+            <input id="outlook-email-input" type="email" placeholder="you@example.com" class="w-full px-3.5 py-2 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <p class="text-[11px] text-stone-500 mt-1">Defaults to your signed-in account.</p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="download-index-html-btn" type="button" class="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-2">
-              <span>💻</span>
-              <span>Download Ready `index.html`</span>
-            </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="email-scope-day" type="button" data-scope="day" class="email-scope-btn h-9 rounded-xl text-xs font-bold border transition-colors">Selected day</button>
+            <button id="email-scope-week" type="button" data-scope="week" class="email-scope-btn h-9 rounded-xl text-xs font-bold border transition-colors">Shown week</button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button id="graph-send-email-btn" type="button" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Send now</button>
+            <button id="outlook-web-compose-btn" type="button" class="h-10 px-4 bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold rounded-xl transition-colors">Open in Outlook web</button>
+          </div>
+          <div class="p-3 rounded-2xl bg-[#FAF8F5] border border-stone-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-stone-700">Preview</span>
+              <button id="copy-digest-btn" type="button" class="text-[11px] font-bold text-sky-700 hover:underline">Copy text</button>
+            </div>
+            <pre id="outlook-digest-preview" class="text-[11px] text-stone-600 whitespace-pre-wrap font-mono bg-white p-2.5 rounded-xl border border-stone-200 max-h-48 overflow-y-auto"></pre>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Left: Full JSON Backup & Restore -->
-          <div class="p-5 rounded-2xl bg-white border border-emerald-100 space-y-4">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-              <span>💾</span>
-              <span>Portable JSON Backup & Restore</span>
-            </h4>
-            <p class="text-xs text-stone-600 leading-relaxed">
-              Unlike CSV (which only stores a flat table), a <strong>JSON Backup</strong> preserves your sub-task checklists, daily intentions, energy mood, focus session count, and Outlook settings so you can move between computers effortlessly.
-            </p>
-            <div class="flex flex-wrap items-center gap-2.5 pt-1">
-              <button id="export-json-btn" type="button" class="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
-                <span>📤</span>
-                <span>Download Full .JSON Backup</span>
-              </button>
-              <button id="import-json-btn" type="button" class="flex-1 py-2.5 px-4 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                <span>📂</span>
-                <span>Restore from .JSON File</span>
-              </button>
-              <input id="import-json-input" type="file" accept=".json,application/json" class="hidden">
+        <div class="space-y-6">
+          <!-- Setup -->
+          <details id="outlook-setup-details" class="warm-card p-6 rounded-3xl group">
+            <summary class="text-sm font-bold font-serif-human text-stone-900 flex items-center justify-between cursor-pointer list-none">
+              <span class="flex items-center gap-2"><span>🔧</span><span>One-time setup</span></span>
+              <span class="text-xs text-stone-400 group-open:rotate-180 transition-transform">▾</span>
+            </summary>
+            <div class="space-y-4 mt-4 text-xs text-stone-600">
+              <div id="file-protocol-warning" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 font-semibold">
+                You opened this file straight from your computer. Microsoft sign-in only works when Sunbeam is served from a web address, such as your GitHub Pages site or <code>http://localhost</code>.
+              </div>
+              <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+                <li>In the <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline font-semibold">Entra admin center → App registrations</a>, choose <strong>New registration</strong>.</li>
+                <li>Under <strong>Redirect URI</strong>, pick <strong>Single-page application (SPA)</strong> and paste the address below.</li>
+                <li>Under <strong>API permissions</strong>, add the Microsoft Graph delegated permissions <code>Calendars.ReadWrite</code> and <code>Mail.Send</code>.</li>
+                <li>Copy the <strong>Application (client) ID</strong> into the box below, or into <code>config.js</code> in your repository.</li>
+              </ol>
+              <div>
+                <span class="block font-bold text-stone-700 mb-1">Redirect URI</span>
+                <div class="flex items-center gap-2">
+                  <input id="detected-redirect-uri" type="text" readonly class="flex-1 min-w-0 px-2.5 py-1.5 text-[11px] font-mono rounded-lg border border-stone-200 bg-stone-50 text-stone-700">
+                  <button id="copy-redirect-uri-btn" type="button" class="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold rounded-lg border border-sky-200">Copy</button>
+                </div>
+              </div>
+              <div>
+                <label for="ms-client-id-input" class="block font-bold text-stone-700 mb-1">Application (client) ID</label>
+                <div class="flex gap-2">
+                  <input id="ms-client-id-input" type="text" placeholder="00000000-0000-0000-0000-000000000000" spellcheck="false" class="flex-1 min-w-0 px-3 py-1.5 font-mono rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                  <button id="save-client-id-btn" type="button" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg">Save</button>
+                </div>
+              </div>
             </div>
-            <p id="json-backup-status" class="text-[11px] font-semibold text-emerald-800">
-              ✓ Auto-saving to browser storage on every change.
-            </p>
-          </div>
+          </details>
 
-          <!-- Right: Interactive GitHub Pages Launch Checklist -->
-          <div class="p-5 rounded-2xl bg-white border border-emerald-100 space-y-3">
-            <div class="flex items-center justify-between">
-              <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-                <span>🌐</span>
-                <span>Your GitHub Pages Launch Checklist</span>
-              </h4>
-              <span id="launch-checklist-progress" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                0/4 steps
-              </span>
+          <!-- Activity log -->
+          <div class="warm-card p-6 rounded-3xl">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-bold font-serif-human text-stone-900">Activity</h4>
+              <span id="synced-count-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">0 on calendar</span>
             </div>
-            <div class="space-y-2 text-xs text-stone-700">
-              <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-stone-50 cursor-pointer">
-                <input type="checkbox" class="launch-step-check w-4 h-4 mt-0.5 rounded text-emerald-600 border-stone-300 focus:ring-emerald-500">
-                <span><strong>1. Download `index.html`:</strong> Click <em>Download Ready `index.html`</em> above to save this complete single-file web app.</span>
-              </label>
-              <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-stone-50 cursor-pointer">
-                <input type="checkbox" class="launch-step-check w-4 h-4 mt-0.5 rounded text-emerald-600 border-stone-300 focus:ring-emerald-500">
-                <span><strong>2. Upload to GitHub:</strong> Create a new repository on GitHub and upload `index.html`.</span>
-              </label>
-              <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-stone-50 cursor-pointer">
-                <input type="checkbox" class="launch-step-check w-4 h-4 mt-0.5 rounded text-emerald-600 border-stone-300 focus:ring-emerald-500">
-                <span><strong>3. Turn on GitHub Pages:</strong> Open <em>Settings → Pages</em>, pick the `main` branch, and click Save.</span>
-              </label>
-              <label class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-stone-50 cursor-pointer">
-                <input type="checkbox" class="launch-step-check w-4 h-4 mt-0.5 rounded text-emerald-600 border-stone-300 focus:ring-emerald-500">
-                <span><strong>4. Link Outlook Auto-Sync:</strong> Add your live `https://username.github.io/...` URL as a SPA Redirect URI in Azure and paste your Client ID above!</span>
-              </label>
+            <div id="graph-sync-log" class="text-[11px] text-stone-600 space-y-1.5 max-h-48 overflow-y-auto font-mono bg-[#FAF8F5] p-2.5 rounded-xl border border-stone-200/80">
+              <div>Nothing yet.</div>
             </div>
           </div>
         </div>
@@ -1053,2280 +616,13 @@
 
   </main>
 
-  <script>
-    // ==========================================
-    // 1. LIVE CLOCK & CURRENT MONTH AUTO-DETECTION
-    // Automatically detects today's real date, week & month
-    // ==========================================
-    function formatYMD(dateObj) {
-      const y = dateObj.getFullYear();
-      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const d = String(dateObj.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    const nowSystem = new Date();
-    const TODAY_YMD = formatYMD(nowSystem);
-
-    // State for navigated Day, Week offset, and Month/Year
-    let selectedDate = TODAY_YMD;
-    let currentMonthYear = {
-      year: nowSystem.getFullYear(),
-      month: nowSystem.getMonth() // 0-indexed (0 = Jan, 9 = Oct, etc.)
-    };
-    let currentWeekOffset = 0; // 0 = current week
-
-    // ==========================================
-    // 2. WARM AUDIO SYNTHESIZER (Web Audio API)
-    // ==========================================
-    class SoundEngine {
-      constructor() {
-        this.ctx = null;
-        this.enabled = true;
-      }
-
-      init() {
-        if (!this.ctx) {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (AudioContext) {
-            this.ctx = new AudioContext();
-          }
-        }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      }
-
-      playTone(freq, type, duration, startTime = 0, gainLevel = 0.14) {
-        if (!this.enabled || !this.ctx) return;
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
-
-          gain.gain.setValueAtTime(gainLevel, this.ctx.currentTime + startTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + startTime + duration);
-
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-
-          osc.start(this.ctx.currentTime + startTime);
-          osc.stop(this.ctx.currentTime + startTime + duration);
-        } catch (e) {}
-      }
-
-      playAdd() {
-        this.init();
-        this.playTone(392.00, 'sine', 0.12, 0, 0.12);
-        this.playTone(523.25, 'sine', 0.18, 0.08, 0.12);
-      }
-
-      playComplete() {
-        this.init();
-        this.playTone(523.25, 'triangle', 0.12, 0, 0.14);
-        this.playTone(659.25, 'triangle', 0.12, 0.08, 0.14);
-        this.playTone(783.99, 'triangle', 0.22, 0.16, 0.16);
-        this.playTone(1046.50, 'sine', 0.35, 0.24, 0.18);
-      }
-
-      playDelete() {
-        this.init();
-        this.playTone(261.63, 'sine', 0.12, 0, 0.08);
-        this.playTone(196.00, 'sine', 0.16, 0.07, 0.08);
-      }
-
-      playFanfare() {
-        this.init();
-        const notes = [523.25, 587.33, 659.25, 783.99, 1046.50];
-        const times = [0, 0.1, 0.2, 0.32, 0.46];
-        notes.forEach((freq, idx) => {
-          this.playTone(freq, 'triangle', 0.3, times[idx], 0.18);
-        });
-      }
-
-      playReminder() {
-        this.init();
-        this.playTone(659.25, 'sine', 0.16, 0, 0.16);
-        this.playTone(880.00, 'sine', 0.24, 0.16, 0.16);
-      }
-    }
-
-    const sounds = new SoundEngine();
-
-    // Warm, human celebration notes
-    const funnyCelebrations = [
-      { emoji: "🌻", msg: "One less thing on your plate! Take a slow, happy breath." },
-      { emoji: "🍪", msg: "Beautifully done! You've earned a stretch or a warm treat." },
-      { emoji: "✨", msg: "Look at you moving through today with grace!" },
-      { emoji: "☕", msg: "Checked off! Your future self is smiling right now." },
-      { emoji: "🌿", msg: "Step by step—you're making real progress today." },
-      { emoji: "🎉", msg: "Boom! Crossed off and out of your head." }
-    ];
-
-    // Warm human ranks
-    const ranks = [
-      { threshold: 0, title: "Cozy Start", emoji: "🌱", desc: "Every good day begins gently. Pick one small thing whenever you're ready." },
-      { threshold: 1, title: "Warming Up", emoji: "☕", desc: "You've set your rhythm in motion! Keep going at your own comfortable pace." },
-      { threshold: 50, title: "Steady Flow", emoji: "🌻", desc: "Halfway through your list! You're balancing today wonderfully." },
-      { threshold: 80, title: "Radiant Momentum", emoji: "✨", desc: "Almost everything wrapped up—what a productive, thoughtful day." },
-      { threshold: 100, title: "Day Complete & Free", emoji: "👑", desc: "All done! Close your laptop, relax your shoulders, and enjoy your evening." }
-    ];
-
-    // ==========================================
-    // 3. UNIFIED STATE & HUMAN PROFILE
-    // ==========================================
-    let tasks = [];
-    let activeView = 'day';
-    let currentFilter = 'all';
-    let selectedPriority = 'medium';
-    let userName = 'friend';
-    let userMood = 'steady';
-    let dailyIntention = '';
-    let outlookEmail = '';
-    let msClientId = '';
-    let msAccessToken = null;
-    let msalInstance = null;
-    let msAccount = null;
-    let isEveningMode = false;
-    let focusTotalSeconds = 25 * 60;
-    let focusRemainingSeconds = 25 * 60;
-    let focusIntervalId = null;
-    let focusIsRunning = false;
-    let focusedTaskId = null;
-    let focusSessionsCompleted = 0;
-    let searchQuery = '';
-    let searchAllDates = false;
-    let openSubtaskInputTaskId = null;
-    let toastTimeout = null;
-
-    function getRelativeDateYMD(daysOffset) {
-      const d = new Date(nowSystem);
-      d.setDate(d.getDate() + daysOffset);
-      return formatYMD(d);
-    }
-
-    function loadSavedState() {
-      try {
-        const savedTasks = localStorage.getItem('sunbeam_tasks_v1');
-        if (savedTasks) {
-          tasks = JSON.parse(savedTasks);
-        } else {
-          // Seed tasks relative to today's actual live date so Day, Week & Month are always populated!
-          tasks = [
-            { id: '1', text: 'Enjoy a quiet morning stretch & glass of water', date: TODAY_YMD, time: '08:00', category: 'Health', priority: 'medium', completed: true, reminder: false },
-            {
-              id: '2',
-              text: 'Focus block: Wrap up main project priorities',
-              date: TODAY_YMD,
-              time: '10:00',
-              category: 'Work',
-              priority: 'high',
-              completed: false,
-              reminder: true,
-              subtasks: [
-                { id: 's1', text: 'Review key project milestones', done: true },
-                { id: 's2', text: 'Draft summary update for team', done: false },
-                { id: 's3', text: 'Send final check-in note', done: false }
-              ]
-            },
-            { id: '3', text: 'Reply to key Outlook emails & clear inbox', date: TODAY_YMD, time: '14:00', category: 'Work', priority: 'medium', completed: false, reminder: true },
-            { id: '4', text: 'Pick up fresh groceries & unwind for dinner', date: TODAY_YMD, time: '18:00', category: 'Personal', priority: 'low', completed: false, reminder: false },
-            { id: '5', text: 'Prepare weekly team notes & ideas', date: getRelativeDateYMD(1), time: '11:00', category: 'Work', priority: 'high', completed: false, reminder: true },
-            { id: '6', text: 'Read 20 pages of a favorite book', date: getRelativeDateYMD(2), time: '20:00', category: 'Learning', priority: 'low', completed: false, reminder: false },
-            { id: '7', text: 'Catch up call with family', date: getRelativeDateYMD(3), time: '17:30', category: 'Personal', priority: 'medium', completed: false, reminder: true },
-            { id: '8', text: 'Monthly reflection & personal budget check-in', date: getRelativeDateYMD(5), time: '16:00', category: 'Personal', priority: 'high', completed: false, reminder: true },
-            { id: '9', text: 'Weekend nature walk & coffee break', date: getRelativeDateYMD(4), time: '09:30', category: 'Health', priority: 'low', completed: false, reminder: false },
-            { id: '10', text: 'Wrap up monthly goals & celebrate wins', date: getRelativeDateYMD(7), time: '17:00', category: 'Work', priority: 'high', completed: false, reminder: true }
-          ];
-        }
-
-        userName = localStorage.getItem('sunbeam_user_name') || 'friend';
-        userMood = localStorage.getItem('sunbeam_user_mood') || 'steady';
-        dailyIntention = localStorage.getItem('sunbeam_daily_intention') || '';
-        outlookEmail = localStorage.getItem('sunbeam_outlook_email') || '';
-        msClientId = localStorage.getItem('sunbeam_ms_client_id') || '';
-        isEveningMode = localStorage.getItem('sunbeam_evening_mode') === 'true';
-        focusSessionsCompleted = parseInt(localStorage.getItem('sunbeam_focus_sessions') || '0', 10) || 0;
-      } catch (e) {
-        tasks = [];
-      }
-    }
-
-    function saveState() {
-      try {
-        localStorage.setItem('sunbeam_tasks_v1', JSON.stringify(tasks));
-        localStorage.setItem('sunbeam_user_name', userName);
-        localStorage.setItem('sunbeam_user_mood', userMood);
-        localStorage.setItem('sunbeam_daily_intention', dailyIntention);
-        localStorage.setItem('sunbeam_outlook_email', outlookEmail);
-        localStorage.setItem('sunbeam_ms_client_id', msClientId);
-        localStorage.setItem('sunbeam_evening_mode', isEveningMode ? 'true' : 'false');
-        localStorage.setItem('sunbeam_focus_sessions', String(focusSessionsCompleted));
-      } catch (e) {}
-    }
-
-    // DOM References
-    const taskForm = document.getElementById('task-form');
-    const taskInput = document.getElementById('task-input');
-    const taskDateInput = document.getElementById('task-date-input');
-    const taskTimeInput = document.getElementById('task-time-input');
-    const taskCategorySelect = document.getElementById('task-category-select');
-    const taskRecurSelect = document.getElementById('task-recur-select');
-    const taskReminderCheck = document.getElementById('task-reminder-check');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
-    const taskList = document.getElementById('task-list');
-    const emptyState = document.getElementById('empty-state');
-    const progressPercent = document.getElementById('progress-percent');
-    const progressCircle = document.getElementById('progress-circle');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const rankBadge = document.getElementById('rank-badge');
-    const rankEmoji = document.getElementById('rank-emoji');
-    const rankText = document.getElementById('rank-text');
-    const rankDesc = document.getElementById('rank-desc');
-    const statTotal = document.getElementById('stat-total');
-    const statCompleted = document.getElementById('stat-completed');
-    const statPending = document.getElementById('stat-pending');
-    const statReminders = document.getElementById('stat-reminders');
-    const countAll = document.getElementById('count-all');
-    const countActive = document.getElementById('count-active');
-    const countCompleted = document.getElementById('count-completed');
-    const taskCount = document.getElementById('task-count');
-    const toastContainer = document.getElementById('toast-container');
-    const toastEmoji = document.getElementById('toast-emoji');
-    const toastMsg = document.getElementById('toast-msg');
-    const soundToggleBtn = document.getElementById('sound-toggle-btn');
-    const soundIcon = document.getElementById('sound-icon');
-    const soundLabel = document.getElementById('sound-label');
-    const clearCompletedBtn = document.getElementById('clear-completed-btn');
-    const priorityChips = document.querySelectorAll('.priority-chip');
-    const filterTabs = document.querySelectorAll('.filter-tab');
-    const navTabs = document.querySelectorAll('.nav-tab');
-
-    // Views
-    const viewDayContainer = document.getElementById('view-day-container');
-    const viewWeekContainer = document.getElementById('view-week-container');
-    const viewMonthContainer = document.getElementById('view-month-container');
-    const viewAnalysisContainer = document.getElementById('view-analysis-container');
-    const viewRemindersContainer = document.getElementById('view-reminders-container');
-    const viewOutlookContainer = document.getElementById('view-outlook-container');
-
-    const dayCurrentLabel = document.getElementById('day-current-label');
-    const dayPrevBtn = document.getElementById('day-prev-btn');
-    const dayNextBtn = document.getElementById('day-next-btn');
-    const jumpTodayBtn = document.getElementById('jump-today-btn');
-    const weekColumnsGrid = document.getElementById('week-columns-grid');
-    const monthCalendarGrid = document.getElementById('month-calendar-grid');
-    const remindersList = document.getElementById('reminders-list');
-    const remindersEmptyState = document.getElementById('reminders-empty-state');
-    const testReminderAlertBtn = document.getElementById('test-reminder-alert-btn');
-    const navReminderBadge = document.getElementById('nav-reminder-badge');
-
-    // Human & Outlook controls
-    const viewGreeting = document.getElementById('view-greeting');
-    const editNameBtn = document.getElementById('edit-name-btn');
-    const nameEditorRow = document.getElementById('name-editor-row');
-    const userNameInput = document.getElementById('user-name-input');
-    const saveNameBtn = document.getElementById('save-name-btn');
-    const dailyIntentionInput = document.getElementById('daily-intention-input');
-    const moodBtns = document.querySelectorAll('.mood-btn');
-    const outlookEmailInput = document.getElementById('outlook-email-input');
-    const saveOutlookEmailBtn = document.getElementById('save-outlook-email-btn');
-    const outlookWebComposeBtn = document.getElementById('outlook-web-compose-btn');
-    const outlookMailtoBtn = document.getElementById('outlook-mailto-btn');
-    const downloadIcsBtn = document.getElementById('download-ics-btn');
-    const quickEmailOutlookBtn = document.getElementById('quick-email-outlook-btn');
-    const quickIcsOutlookBtn = document.getElementById('quick-ics-outlook-btn');
-    const copyDigestBtn = document.getElementById('copy-digest-btn');
-    const outlookDigestPreview = document.getElementById('outlook-digest-preview');
-
-    function triggerConfetti(isGrand = false) {
-      if (typeof confetti === 'function') {
-        if (isGrand) {
-          confetti({ particleCount: 110, spread: 85, origin: { y: 0.6 } });
-        } else {
-          confetti({ particleCount: 40, spread: 60, origin: { y: 0.75 }, ticks: 180 });
-        }
-      }
-    }
-
-    function showCelebration(is100Percent = false, customMsg = null, customEmoji = null) {
-      if (toastTimeout) clearTimeout(toastTimeout);
-
-      if (customMsg) {
-        toastEmoji.textContent = customEmoji || '☀️';
-        toastMsg.textContent = customMsg;
-      } else if (is100Percent) {
-        toastEmoji.textContent = '👑';
-        toastMsg.textContent = 'Everything on your list is complete! Enjoy a well-deserved rest.';
-      } else {
-        const item = funnyCelebrations[Math.floor(Math.random() * funnyCelebrations.length)];
-        toastEmoji.textContent = item.emoji;
-        toastMsg.textContent = item.msg;
-      }
-
-      toastContainer.classList.remove('-translate-y-24', 'opacity-0');
-      toastContainer.classList.add('translate-y-0', 'opacity-100');
-
-      toastTimeout = setTimeout(() => {
-        toastContainer.classList.remove('translate-y-0', 'opacity-100');
-        toastContainer.classList.add('-translate-y-24', 'opacity-0');
-      }, 3500);
-    }
-
-    // Update Human Greeting & Detected Clock Header
-    function updateHumanGreetingAndClock() {
-      const hr = new Date().getHours();
-      let timeGreeting = 'Good morning';
-      let icon = '☀️';
-      if (hr >= 12 && hr < 17) {
-        timeGreeting = 'Good afternoon';
-        icon = '🌤️';
-      } else if (hr >= 17 || hr < 4) {
-        timeGreeting = 'Good evening';
-        icon = '🌙';
-      }
-      viewGreeting.textContent = `${timeGreeting}, ${userName} ${icon}`;
-
-      const liveMonthName = nowSystem.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const liveFullDate = nowSystem.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-      document.getElementById('header-date').textContent = liveFullDate;
-      document.getElementById('live-month-pill').textContent = `🗓️ Auto-Detected: ${liveMonthName}`;
-    }
-
-    function updateDashboard() {
-      updateHumanGreetingAndClock();
-
-      const total = tasks.length;
-      const completed = tasks.filter(t => t.completed).length;
-      const pending = total - completed;
-      const reminderCount = tasks.filter(t => t.reminder && !t.completed).length;
-      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-      statTotal.textContent = total;
-      statCompleted.textContent = completed;
-      statPending.textContent = pending;
-      statReminders.textContent = reminderCount;
-
-      if (reminderCount > 0) {
-        navReminderBadge.classList.remove('hidden');
-      } else {
-        navReminderBadge.classList.add('hidden');
-      }
-
-      progressPercent.textContent = `${percent}%`;
-      progressText.textContent = `${percent}% (${completed} of ${total} tasks completed)`;
-
-      const circumference = 251.2;
-      const offset = circumference - (percent / 100) * circumference;
-      progressCircle.style.strokeDashoffset = offset;
-
-      progressBar.style.width = `${percent}%`;
-      progressBar.setAttribute('aria-valuenow', percent);
-
-      let currentRank = ranks[0];
-      for (let i = ranks.length - 1; i >= 0; i--) {
-        if (percent >= ranks[i].threshold && (total > 0 || ranks[i].threshold === 0)) {
-          currentRank = ranks[i];
-          break;
-        }
-      }
-
-      rankEmoji.textContent = currentRank.emoji;
-      rankText.textContent = currentRank.title;
-      rankDesc.textContent = currentRank.desc;
-
-      // Update Outlook status pill
-      const quickStatus = document.getElementById('quick-outlook-status');
-      const syncedCount = tasks.filter(t => t.syncedToOutlook).length;
-      if (quickStatus) {
-        quickStatus.textContent = msAccount
-          ? `Live: ${msAccount.username}`
-          : `Auto-Sync (${syncedCount}/${tasks.length})`;
-      }
-      const syncedBadge = document.getElementById('synced-count-badge');
-      if (syncedBadge) {
-        syncedBadge.textContent = `${syncedCount} of ${tasks.length} synced to calendar`;
-      }
-    }
-
-    // ==========================================
-    // RENDER 1: DAY VIEW
-    // ==========================================
-    function renderDayView() {
-      const dateParts = selectedDate.split('-');
-      const d = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const isToday = selectedDate === TODAY_YMD;
-      dayCurrentLabel.textContent = d.toLocaleDateString('en-US', options) + (isToday ? ' (Today)' : '');
-
-      let dayTasks = searchAllDates
-        ? tasks.slice()
-        : tasks.filter(t => t.date === selectedDate);
-
-      if (searchQuery.trim() !== '') {
-        const q = searchQuery.trim().toLowerCase();
-        dayTasks = dayTasks.filter(t => {
-          const inTitle = (t.text || '').toLowerCase().includes(q);
-          const inCat = (t.category || '').toLowerCase().includes(q);
-          const inSubs = Array.isArray(t.subtasks) && t.subtasks.some(st => (st.text || '').toLowerCase().includes(q));
-          return inTitle || inCat || inSubs;
-        });
-      }
-
-      const totalDay = dayTasks.length;
-      const completedDay = dayTasks.filter(t => t.completed).length;
-      const activeDay = totalDay - completedDay;
-
-      countAll.textContent = totalDay;
-      countActive.textContent = activeDay;
-      countCompleted.textContent = completedDay;
-      taskCount.textContent = `${totalDay} ${totalDay === 1 ? 'plan' : 'plans'}`;
-
-      if (currentFilter === 'active') {
-        dayTasks = dayTasks.filter(t => !t.completed);
-      } else if (currentFilter === 'completed') {
-        dayTasks = dayTasks.filter(t => t.completed);
-      }
-
-      taskList.innerHTML = '';
-
-      if (dayTasks.length === 0) {
-        emptyState.classList.remove('hidden');
-      } else {
-        emptyState.classList.add('hidden');
-
-        dayTasks.forEach(task => {
-          const li = document.createElement('li');
-          li.className = 'group flex items-center justify-between p-4 bg-[#FAF8F5] hover:bg-[#F5EFE6] rounded-2xl border border-[#EFE8DC] transition-all';
-
-          const left = document.createElement('div');
-          left.className = 'flex items-center gap-3.5 min-w-0 flex-1 mr-3';
-
-          const checkBtn = document.createElement('button');
-          checkBtn.type = 'button';
-          checkBtn.className = `w-6 h-6 rounded-xl border flex items-center justify-center transition-all ${
-            task.completed 
-              ? 'bg-emerald-500 border-emerald-600 text-white shadow-xs' 
-              : 'border-stone-300 bg-white hover:border-amber-500 text-transparent'
-          }`;
-          checkBtn.innerHTML = '✓';
-          checkBtn.addEventListener('click', () => toggleTask(task.id));
-
-          const textWrapper = document.createElement('div');
-          textWrapper.className = 'min-w-0 flex-1 cursor-pointer';
-          textWrapper.addEventListener('click', () => toggleTask(task.id));
-
-          const titleP = document.createElement('p');
-          titleP.textContent = task.text;
-          titleP.className = `text-sm font-semibold truncate ${task.completed ? 'line-through text-stone-400' : 'text-stone-800'}`;
-
-          const metaDiv = document.createElement('div');
-          metaDiv.className = 'flex items-center gap-1.5 mt-1 flex-wrap text-[11px]';
-
-          if (task.time) {
-            const timeTag = document.createElement('span');
-            timeTag.className = 'px-2 py-0.5 rounded-lg bg-white text-stone-600 font-medium border border-stone-200/80';
-            timeTag.textContent = `⏰ ${task.time}`;
-            metaDiv.appendChild(timeTag);
-          }
-
-          const catTag = document.createElement('span');
-          catTag.className = 'px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 font-medium border border-amber-200/70';
-          catTag.textContent = task.category || 'Work';
-          metaDiv.appendChild(catTag);
-
-          const prioTag = document.createElement('span');
-          prioTag.className = 'px-2 py-0.5 rounded-lg font-bold';
-          if (task.priority === 'high') {
-            prioTag.className += ' bg-rose-50 text-rose-700 border border-rose-200';
-            prioTag.textContent = '🔥 High';
-          } else if (task.priority === 'low') {
-            prioTag.className += ' bg-emerald-50 text-emerald-700 border border-emerald-200';
-            prioTag.textContent = '☕ Chill';
-          } else {
-            prioTag.className += ' bg-amber-50 text-amber-800 border border-amber-200';
-            prioTag.textContent = '⚡ Medium';
-          }
-          metaDiv.appendChild(prioTag);
-
-          if (task.reminder) {
-            const remTag = document.createElement('span');
-            remTag.className = 'px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 font-semibold border border-purple-200';
-            remTag.textContent = '🔔 Nudge';
-            metaDiv.appendChild(remTag);
-          }
-
-          if (task.syncedToOutlook) {
-            const syncTag = document.createElement('span');
-            syncTag.className = 'px-2 py-0.5 rounded-lg bg-sky-50 text-sky-800 font-semibold border border-sky-200';
-            syncTag.textContent = '☁️ In Calendar';
-            metaDiv.appendChild(syncTag);
-          }
-
-          if (Array.isArray(task.subtasks) && task.subtasks.length > 0) {
-            const doneSubs = task.subtasks.filter(st => st.done).length;
-            const subBadge = document.createElement('span');
-            subBadge.className = 'px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200';
-            subBadge.textContent = `☑️ ${doneSubs}/${task.subtasks.length} steps`;
-            metaDiv.appendChild(subBadge);
-          }
-
-          if (searchAllDates && task.date !== selectedDate) {
-            const dateBadge = document.createElement('span');
-            dateBadge.className = 'px-2 py-0.5 rounded-lg bg-stone-200 text-stone-700 font-bold';
-            dateBadge.textContent = `📅 ${task.date}`;
-            metaDiv.appendChild(dateBadge);
-          }
-
-          textWrapper.appendChild(titleP);
-          textWrapper.appendChild(metaDiv);
-
-          // Render Sub-Task Mini-Checklist if present or if adding a step
-          const subContainer = document.createElement('div');
-          subContainer.className = 'mt-2.5 space-y-1.5 pl-1 border-l-2 border-amber-200/80';
-          subContainer.addEventListener('click', (e) => e.stopPropagation());
-
-          if (Array.isArray(task.subtasks) && task.subtasks.length > 0) {
-            task.subtasks.forEach(st => {
-              const stRow = document.createElement('div');
-              stRow.className = 'flex items-center justify-between gap-2 text-xs bg-white/80 px-2.5 py-1 rounded-lg border border-stone-200/70';
-
-              const stLabel = document.createElement('label');
-              stLabel.className = 'flex items-center gap-2 cursor-pointer flex-1 min-w-0';
-
-              const stCheck = document.createElement('input');
-              stCheck.type = 'checkbox';
-              stCheck.checked = !!st.done;
-              stCheck.className = 'w-3.5 h-3.5 rounded text-emerald-600 border-stone-300 focus:ring-amber-400';
-              stCheck.addEventListener('change', () => toggleSubtask(task.id, st.id));
-
-              const stText = document.createElement('span');
-              stText.textContent = st.text;
-              stText.className = `truncate ${st.done ? 'line-through text-stone-400' : 'text-stone-700 font-medium'}`;
-
-              stLabel.appendChild(stCheck);
-              stLabel.appendChild(stText);
-
-              const stDel = document.createElement('button');
-              stDel.type = 'button';
-              stDel.className = 'text-stone-300 hover:text-rose-500 font-bold px-1';
-              stDel.innerHTML = '&times;';
-              stDel.title = 'Remove step';
-              stDel.addEventListener('click', () => deleteSubtask(task.id, st.id));
-
-              stRow.appendChild(stLabel);
-              stRow.appendChild(stDel);
-              subContainer.appendChild(stRow);
-            });
-          }
-
-          // Inline mini-input to add a new sub-step
-          if (openSubtaskInputTaskId === task.id) {
-            const addStepRow = document.createElement('div');
-            addStepRow.className = 'flex items-center gap-1.5 pt-1';
-
-            const stepInput = document.createElement('input');
-            stepInput.type = 'text';
-            stepInput.placeholder = 'Type a small step & press Enter...';
-            stepInput.className = 'flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400';
-            stepInput.addEventListener('keydown', (ev) => {
-              if (ev.key === 'Enter') {
-                ev.preventDefault();
-                addSubtaskToTask(task.id, stepInput.value);
-              }
-            });
-
-            const saveStepBtn = document.createElement('button');
-            saveStepBtn.type = 'button';
-            saveStepBtn.className = 'px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg';
-            saveStepBtn.textContent = 'Add';
-            saveStepBtn.addEventListener('click', () => addSubtaskToTask(task.id, stepInput.value));
-
-            addStepRow.appendChild(stepInput);
-            addStepRow.appendChild(saveStepBtn);
-            subContainer.appendChild(addStepRow);
-          }
-
-          if ((Array.isArray(task.subtasks) && task.subtasks.length > 0) || openSubtaskInputTaskId === task.id) {
-            textWrapper.appendChild(subContainer);
-          }
-
-          left.appendChild(checkBtn);
-          left.appendChild(textWrapper);
-
-          const rightBtns = document.createElement('div');
-          rightBtns.className = 'flex items-center gap-1';
-
-          // Add sub-step toggle button
-          const addStepToggleBtn = document.createElement('button');
-          addStepToggleBtn.type = 'button';
-          addStepToggleBtn.title = 'Break this plan into smaller steps';
-          addStepToggleBtn.className = 'text-xs px-2 py-1 rounded-lg text-stone-600 bg-stone-100 hover:bg-amber-50 hover:text-amber-900 border border-stone-200/80 font-semibold transition-colors';
-          addStepToggleBtn.textContent = '+ Step';
-          addStepToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openSubtaskInputTaskId = openSubtaskInputTaskId === task.id ? null : task.id;
-            renderDayView();
-          });
-          rightBtns.appendChild(addStepToggleBtn);
-
-                    // Load task into Gentle Focus Timer button
-          const focusTaskBtn = document.createElement('button');
-          focusTaskBtn.type = 'button';
-          focusTaskBtn.title = 'Start a focus session for this task';
-          focusTaskBtn.className = 'text-xs px-2 py-1 rounded-lg text-amber-800 bg-amber-50/80 hover:bg-amber-100 border border-amber-200/70 font-semibold transition-colors';
-          focusTaskBtn.textContent = '▶️ Focus';
-          focusTaskBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            selectTaskForFocus(task);
-          });
-          rightBtns.appendChild(focusTaskBtn);
-
-          // Add single task to Outlook Web Calendar button
-          const outlookBtn = document.createElement('button');
-          outlookBtn.type = 'button';
-          outlookBtn.title = 'Save this task to Outlook Calendar';
-          outlookBtn.className = 'text-xs px-2 py-1 rounded-lg text-sky-700 hover:bg-sky-50 border border-transparent hover:border-sky-200 transition-colors';
-          outlookBtn.textContent = '📧 Outlook';
-          outlookBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openTaskInOutlookCalendar(task);
-          });
-
-          const delBtn = document.createElement('button');
-          delBtn.type = 'button';
-          delBtn.title = 'Remove plan';
-          delBtn.className = 'text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl w-8 h-8 flex items-center justify-center text-lg font-bold transition-colors';
-          delBtn.innerHTML = '&times;';
-          delBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteTask(task.id);
-          });
-
-          rightBtns.appendChild(outlookBtn);
-          rightBtns.appendChild(delBtn);
-
-          li.appendChild(left);
-          li.appendChild(rightBtns);
-          taskList.appendChild(li);
-        });
-      }
-    }
-
-    // ==========================================
-    // RENDER 2: WEEK VIEW (Dynamic Live Week Calculation)
-    // ==========================================
-    function getWeekDaysArray(offsetWeeks = 0) {
-      const anchor = new Date(nowSystem);
-      anchor.setDate(anchor.getDate() + offsetWeeks * 7);
-      const dayOfWeek = anchor.getDay(); // 0=Sun, 1=Mon...
-      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(anchor);
-      monday.setDate(anchor.getDate() + diffToMonday);
-
-      const days = [];
-      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        const ymd = formatYMD(d);
-        const shortLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        days.push({
-          name: dayNames[i],
-          date: ymd,
-          label: ymd === TODAY_YMD ? `${shortLabel} (Today)` : shortLabel
-        });
-      }
-      return days;
-    }
-
-    function renderWeekView() {
-      weekColumnsGrid.innerHTML = '';
-      const weekDays = getWeekDaysArray(currentWeekOffset);
-
-      const sub = document.getElementById('week-range-subtitle');
-      if (sub && weekDays.length === 7) {
-        sub.textContent = `Week of ${weekDays[0].label.replace(' (Today)', '')} – ${weekDays[6].label.replace(' (Today)', '')} • Automatically feeds into your Month & Day`;
-      }
-
-      weekDays.forEach(day => {
-        const col = document.createElement('div');
-        const isToday = day.date === TODAY_YMD;
-        col.className = `warm-card rounded-2xl p-3 flex flex-col min-h-[340px] transition-all ${
-          isToday ? 'ring-2 ring-amber-400 bg-[#FFFDF7]' : ''
-        }`;
-
-        const colHeader = document.createElement('div');
-        colHeader.className = 'border-b border-stone-100 pb-2 mb-2 flex items-center justify-between';
-
-        const titleDiv = document.createElement('div');
-        titleDiv.innerHTML = `<span class="text-xs font-bold ${isToday ? 'text-amber-700' : 'text-stone-800'}">${day.name}</span> <span class="text-[11px] text-stone-400 font-medium block">${day.label}</span>`;
-
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        addBtn.className = 'px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-[10px] font-bold transition-colors';
-        addBtn.textContent = '+ Plan';
-        addBtn.addEventListener('click', () => {
-          selectedDate = day.date;
-          taskDateInput.value = day.date;
-          switchView('day');
-          taskInput.focus();
-        });
-
-        colHeader.appendChild(titleDiv);
-        colHeader.appendChild(addBtn);
-        col.appendChild(colHeader);
-
-        const dayTasks = tasks.filter(t => t.date === day.date);
-        const taskContainer = document.createElement('div');
-        taskContainer.className = 'space-y-2 flex-1 overflow-y-auto max-h-[260px] pr-1';
-
-        if (dayTasks.length === 0) {
-          const empty = document.createElement('div');
-          empty.className = 'text-center py-6 text-[11px] text-stone-300 italic';
-          empty.textContent = 'Open day';
-          taskContainer.appendChild(empty);
-        } else {
-          dayTasks.forEach(task => {
-            const card = document.createElement('div');
-            card.className = `p-2.5 rounded-xl border text-xs transition-all cursor-pointer ${
-              task.completed 
-                ? 'bg-stone-50 border-stone-200 opacity-60' 
-                : 'bg-[#FAF8F5] hover:border-amber-300 border-[#EFE8DC]'
-            }`;
-            card.addEventListener('click', () => toggleTask(task.id));
-
-            const topRow = document.createElement('div');
-            topRow.className = 'flex items-start justify-between gap-1';
-
-            const p = document.createElement('p');
-            p.textContent = task.text;
-            p.className = `font-medium truncate ${task.completed ? 'line-through text-stone-400' : 'text-stone-800'}`;
-
-            const check = document.createElement('span');
-            check.className = `text-[10px] font-bold ${task.completed ? 'text-emerald-600' : 'text-stone-300'}`;
-            check.textContent = task.completed ? '✓' : '○';
-
-            topRow.appendChild(p);
-            topRow.appendChild(check);
-            card.appendChild(topRow);
-            taskContainer.appendChild(card);
-          });
-        }
-
-        col.appendChild(taskContainer);
-        weekColumnsGrid.appendChild(col);
-      });
-    }
-
-    // ==========================================
-    // RENDER 3: MONTH VIEW (Auto-Detected Live Month & Year)
-    // ==========================================
-    function renderMonthView() {
-      monthCalendarGrid.innerHTML = '';
-
-      const year = currentMonthYear.year;
-      const month = currentMonthYear.month;
-
-      const firstDayOfMonth = new Date(year, month, 1);
-      const startDayOffset = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
-      const totalDays = new Date(year, month + 1, 0).getDate();
-
-      const monthTitle = firstDayOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      const headingEl = document.getElementById('month-title-heading');
-      if (headingEl) headingEl.textContent = monthTitle;
-
-      for (let i = 0; i < startDayOffset; i++) {
-        const emptyCell = document.createElement('div');
-        emptyCell.className = 'min-h-[72px] sm:min-h-[92px] p-1 bg-stone-100/40 rounded-2xl border border-stone-200/40 opacity-40';
-        monthCalendarGrid.appendChild(emptyCell);
-      }
-
-      const monthStr = String(month + 1).padStart(2, '0');
-
-      for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
-        const dateStr = `${year}-${monthStr}-${String(dayNum).padStart(2, '0')}`;
-        const isToday = dateStr === TODAY_YMD;
-        const dayTasks = tasks.filter(t => t.date === dateStr);
-        const hasTasks = dayTasks.length > 0;
-        const allDone = hasTasks && dayTasks.every(t => t.completed);
-
-        const cell = document.createElement('div');
-        cell.className = `min-h-[72px] sm:min-h-[92px] p-2 bg-white rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-          isToday 
-            ? 'border-amber-500 ring-2 ring-amber-200 bg-[#FFFDF7]' 
-            : 'border-[#EFE8DC] hover:border-amber-300 hover:bg-amber-50/30'
-        }`;
-
-        cell.addEventListener('click', () => {
-          selectedDate = dateStr;
-          taskDateInput.value = dateStr;
-          switchView('day');
-        });
-
-        const topRow = document.createElement('div');
-        topRow.className = 'flex items-center justify-between';
-
-        const numSpan = document.createElement('span');
-        numSpan.className = `text-xs font-bold ${
-          isToday 
-            ? 'w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center' 
-            : 'text-stone-700'
-        }`;
-        numSpan.textContent = dayNum;
-        topRow.appendChild(numSpan);
-
-        if (hasTasks) {
-          const badge = document.createElement('span');
-          badge.className = `text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-            allDone ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-          }`;
-          badge.textContent = `${dayTasks.filter(t => t.completed).length}/${dayTasks.length}`;
-          topRow.appendChild(badge);
-        }
-
-        cell.appendChild(topRow);
-
-        const taskListDiv = document.createElement('div');
-        taskListDiv.className = 'mt-1 space-y-1 overflow-hidden';
-
-        if (hasTasks) {
-          dayTasks.slice(0, 2).forEach(t => {
-            const p = document.createElement('p');
-            p.className = `text-[10px] truncate ${t.completed ? 'line-through text-stone-300' : 'text-stone-600'}`;
-            p.textContent = `• ${t.text}`;
-            taskListDiv.appendChild(p);
-          });
-          if (dayTasks.length > 2) {
-            const more = document.createElement('p');
-            more.className = 'text-[9px] text-amber-700 font-bold';
-            more.textContent = `+${dayTasks.length - 2} more`;
-            taskListDiv.appendChild(more);
-          }
-        }
-
-        cell.appendChild(taskListDiv);
-        monthCalendarGrid.appendChild(cell);
-      }
-    }
-
-    // ==========================================
-    // RENDER 4: ANALYSIS VIEW
-    // ==========================================
-    function renderAnalysisView() {
-      const total = tasks.length;
-      const completed = tasks.filter(t => t.completed).length;
-      const velocity = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-      const highTasks = tasks.filter(t => t.priority === 'high');
-      const highCompleted = highTasks.filter(t => t.completed).length;
-      const highRate = highTasks.length === 0 ? 0 : Math.round((highCompleted / highTasks.length) * 100);
-
-      document.getElementById('analytics-velocity').textContent = `${velocity}%`;
-      document.getElementById('analytics-high-rate').textContent = `${highRate}%`;
-      document.getElementById('analytics-reminder-count').textContent = tasks.filter(t => t.reminder && !t.completed).length;
-
-      // Horizon comparisons (Selected Day, Current Week, Current Detected Month)
-      const dayItems = tasks.filter(t => t.date === selectedDate);
-      const dayDone = dayItems.filter(t => t.completed).length;
-      const dayPct = dayItems.length === 0 ? 0 : Math.round((dayDone / dayItems.length) * 100);
-      document.getElementById('horizon-day-stat').textContent = `${dayDone}/${dayItems.length} (${dayPct}%)`;
-      document.getElementById('horizon-day-bar').style.width = `${dayPct}%`;
-
-      const weekDates = getWeekDaysArray(currentWeekOffset).map(d => d.date);
-      const weekItems = tasks.filter(t => weekDates.includes(t.date));
-      const weekDone = weekItems.filter(t => t.completed).length;
-      const weekPct = weekItems.length === 0 ? 0 : Math.round((weekDone / weekItems.length) * 100);
-      document.getElementById('horizon-week-stat').textContent = `${weekDone}/${weekItems.length} (${weekPct}%)`;
-      document.getElementById('horizon-week-bar').style.width = `${weekPct}%`;
-
-      const activeMonthPrefix = `${currentMonthYear.year}-${String(currentMonthYear.month + 1).padStart(2, '0')}-`;
-      const monthItems = tasks.filter(t => t.date && t.date.startsWith(activeMonthPrefix));
-      const monthDone = monthItems.filter(t => t.completed).length;
-      const monthPct = monthItems.length === 0 ? 0 : Math.round((monthDone / monthItems.length) * 100);
-      document.getElementById('horizon-month-stat').textContent = `${monthDone}/${monthItems.length} (${monthPct}%)`;
-      document.getElementById('horizon-month-bar').style.width = `${monthPct}%`;
-
-      const categories = ['Work', 'Personal', 'Health', 'Learning'];
-      const catCounts = { Work: 0, Personal: 0, Health: 0, Learning: 0 };
-
-      tasks.forEach(t => {
-        if (catCounts[t.category] !== undefined) {
-          catCounts[t.category]++;
-        } else {
-          catCounts.Work++;
-        }
-      });
-
-      let topCat = 'Work';
-      let maxCount = -1;
-      categories.forEach(c => {
-        if (catCounts[c] > maxCount) {
-          maxCount = catCounts[c];
-          topCat = c;
-        }
-      });
-      document.getElementById('analytics-top-category').textContent = topCat;
-
-      categories.forEach(cat => {
-        const count = catCounts[cat];
-        const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-        const lower = cat.toLowerCase();
-
-        const statElem = document.getElementById(`cat-${lower}-stat`);
-        const barElem = document.getElementById(`cat-${lower}-bar`);
-        if (statElem && barElem) {
-          statElem.textContent = `${count} plans (${pct}%)`;
-          barElem.style.width = `${pct}%`;
-        }
-      });
-
-      const insightsContainer = document.getElementById('insights-container');
-      insightsContainer.innerHTML = '';
-
-      const insights = [
-        {
-          icon: '🌻',
-          title: 'Your Natural Rhythm',
-          desc: velocity >= 60
-            ? `You've wrapped up ${velocity}% of your plans! Remember to pause and celebrate how far you've come.`
-            : `You're at ${velocity}% completion. Pick just one gentle priority to build momentum without stress.`,
-          bg: 'bg-amber-50/90 text-amber-950 border-amber-200'
-        },
-        {
-          icon: '💛',
-          title: 'Life Balance Check',
-          desc: `Most of your current plans focus on '${topCat}' (${maxCount} items). Make sure to leave a little room for rest and self-care.`,
-          bg: 'bg-rose-50/80 text-rose-950 border-rose-200'
-        },
-        {
-          icon: '📧',
-          title: 'Outlook Backup Ready',
-          desc: outlookEmail
-            ? `Your planner is linked to ${outlookEmail}. You can send a snapshot to your inbox anytime.`
-            : `Visit the Outlook tab to save your email address for 1-click inbox digests and calendar exports.`,
-          bg: 'bg-sky-50/80 text-sky-950 border-sky-200'
-        }
-      ];
-
-      insights.forEach(item => {
-        const card = document.createElement('div');
-        card.className = `p-3.5 rounded-2xl border text-xs flex items-start gap-3 ${item.bg}`;
-        card.innerHTML = `
-          <span class="text-xl">${item.icon}</span>
-          <div>
-            <p class="font-bold text-sm mb-0.5">${item.title}</p>
-            <p class="leading-relaxed opacity-90">${item.desc}</p>
-          </div>
-        `;
-        insightsContainer.appendChild(card);
-      });
-    }
-
-    // ==========================================
-    // RENDER 5: REMINDERS VIEW
-    // ==========================================
-    function renderRemindersView() {
-      remindersList.innerHTML = '';
-      const flagged = tasks.filter(t => t.reminder);
-
-      if (flagged.length === 0) {
-        remindersEmptyState.classList.remove('hidden');
-      } else {
-        remindersEmptyState.classList.add('hidden');
-
-        flagged.forEach(task => {
-          const li = document.createElement('li');
-          li.className = `p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 transition-all ${
-            task.completed 
-              ? 'bg-stone-50 border-stone-200 opacity-60' 
-              : 'bg-white border-amber-200 shadow-xs'
-          }`;
-
-          const left = document.createElement('div');
-          left.className = 'flex items-center gap-3 min-w-0 flex-1';
-
-          const icon = document.createElement('div');
-          icon.className = `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-            task.completed ? 'bg-stone-200 text-stone-500' : 'bg-amber-100 text-amber-800 font-bold'
-          }`;
-          icon.innerHTML = task.completed ? '✓' : '🔔';
-
-          const details = document.createElement('div');
-          details.className = 'min-w-0 flex-1';
-
-          const title = document.createElement('p');
-          title.textContent = task.text;
-          title.className = `text-sm font-bold truncate ${task.completed ? 'line-through text-stone-400' : 'text-stone-800'}`;
-
-          const sub = document.createElement('p');
-          sub.className = 'text-xs text-stone-500 mt-0.5';
-          sub.textContent = `Scheduled for ${task.date} ${task.time ? 'at ' + task.time : ''} • ${task.category}`;
-
-          details.appendChild(title);
-          details.appendChild(sub);
-          left.appendChild(icon);
-          left.appendChild(details);
-
-          const btnGroup = document.createElement('div');
-          btnGroup.className = 'flex items-center gap-2';
-
-          if (!task.completed) {
-            const snoozeBtn = document.createElement('button');
-            snoozeBtn.type = 'button';
-            snoozeBtn.className = 'px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 transition-colors';
-            snoozeBtn.textContent = 'Snooze +15m';
-            snoozeBtn.addEventListener('click', () => snoozeTask(task.id));
-            btnGroup.appendChild(snoozeBtn);
-          }
-
-          const actionBtn = document.createElement('button');
-          actionBtn.type = 'button';
-          actionBtn.className = `px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-            task.completed 
-              ? 'bg-stone-200 text-stone-600 hover:bg-stone-300' 
-              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-          }`;
-          actionBtn.textContent = task.completed ? 'Mark Pending' : 'Check Off';
-          actionBtn.addEventListener('click', () => toggleTask(task.id));
-          btnGroup.appendChild(actionBtn);
-
-          li.appendChild(left);
-          li.appendChild(btnGroup);
-          remindersList.appendChild(li);
-        });
-      }
-    }
-
-    // ==========================================
-    // RENDER 6: OUTLOOK SYNC HUB & DIGEST GENERATOR
-    // ==========================================
-    function buildOutlookDigestText() {
-      const pending = tasks.filter(t => !t.completed);
-      const done = tasks.filter(t => t.completed);
-      const lines = [
-        `☀️ SUNBEAM PLANNER DIGEST (${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })})`,
-        `==================================================`,
-        `Progress: ${done.length} of ${tasks.length} completed`,
-        dailyIntention ? `Daily Intention: "${dailyIntention}"` : '',
-        ``,
-        `📌 ACTIVE PLANS (${pending.length}):`,
-        ...(pending.length === 0
-          ? ['  • All caught up!']
-          : pending.map(t => `  • [${t.date} ${t.time || ''}] ${t.text} (${t.category}, ${t.priority.toUpperCase()})${t.reminder ? ' 🔔' : ''}`)),
-        ``,
-        `✅ COMPLETED (${done.length}):`,
-        ...(done.length === 0
-          ? ['  • None yet today']
-          : done.map(t => `  • [✓] ${t.text} (${t.date})`))
-      ].filter(Boolean);
-      return lines.join('\n');
-    }
-
-    function renderOutlookView() {
-      if (outlookEmailInput) {
-        outlookEmailInput.value = outlookEmail;
-      }
-      if (outlookDigestPreview) {
-        outlookDigestPreview.textContent = buildOutlookDigestText();
-      }
-    }
-
-    function openOutlookWebCompose() {
-      const to = encodeURIComponent(outlookEmail || '');
-      const subject = encodeURIComponent(`☀️ My Sunbeam Planner Tasks (${TODAY_YMD})`);
-      const body = encodeURIComponent(buildOutlookDigestText());
-      const url = `https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${subject}&body=${body}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      sounds.playAdd();
-      showCelebration(false, 'Opened your task digest in Outlook Web!', '📧');
-    }
-
-    function openOutlookMailto() {
-      const to = encodeURIComponent(outlookEmail || '');
-      const subject = encodeURIComponent(`☀️ My Sunbeam Planner Tasks (${TODAY_YMD})`);
-      const body = encodeURIComponent(buildOutlookDigestText());
-      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
-      sounds.playAdd();
-      showCelebration(false, 'Opened your email client with your tasks!', '✉️');
-    }
-
-    function openTaskInOutlookCalendar(task) {
-      const dateClean = (task.date || TODAY_YMD).replace(/-/g, '');
-      const timeClean = (task.time || '10:00').replace(':', '') + '00';
-      const startIso = `${task.date || TODAY_YMD}T${task.time || '10:00'}:00`;
-      const subject = encodeURIComponent(`☀️ ${task.text}`);
-      const body = encodeURIComponent(`Category: ${task.category || 'Work'} | Priority: ${task.priority || 'medium'}\nSynced from Sunbeam Planner`);
-      const url = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${subject}&startdt=${encodeURIComponent(startIso)}&body=${body}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      showCelebration(false, `Opening "${task.text}" in Outlook Calendar!`, '📅');
-    }
-
-    function downloadOutlookICS() {
-      const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//Sunbeam Human Planner//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH'
-      ];
-
-      tasks.forEach(t => {
-        const dStr = (t.date || TODAY_YMD).replace(/-/g, '');
-        const tParts = (t.time || '10:00').split(':');
-        const startH = String(tParts[0] || '10').padStart(2, '0');
-        const startM = String(tParts[1] || '00').padStart(2, '0');
-        const endH = String((parseInt(startH) + 1) % 24).padStart(2, '0');
-
-        lines.push('BEGIN:VEVENT');
-        lines.push(`UID:sunbeam-${t.id}@sunbeam.local`);
-        lines.push(`DTSTAMP:${dStr}T${startH}${startM}00Z`);
-        lines.push(`DTSTART:${dStr}T${startH}${startM}00`);
-        lines.push(`DTEND:${dStr}T${endH}${startM}00`);
-        lines.push(`SUMMARY:${(t.completed ? '[Done] ' : '') + t.text}`);
-        lines.push(`DESCRIPTION:Category: ${t.category} | Priority: ${t.priority}`);
-        if (t.reminder) {
-          lines.push('BEGIN:VALARM');
-          lines.push('TRIGGER:-PT15M');
-          lines.push('ACTION:DISPLAY');
-          lines.push(`DESCRIPTION:Reminder: ${t.text}`);
-          lines.push('END:VALARM');
-        }
-        lines.push('END:VEVENT');
-      });
-
-      lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sunbeam_outlook_calendar_${TODAY_YMD}.ics`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      sounds.playAdd();
-      showCelebration(false, 'Downloaded .ICS file for Outlook Calendar!', '📅');
-    }
-
-    // ==========================================
-    // MICROSOFT GRAPH API & MSAL AUTO-SYNC ENGINE
-    // Automatically pushes tasks to Outlook Calendar
-    // ==========================================
-    function appendSyncLog(msg) {
-      const logBox = document.getElementById('graph-sync-log');
-      if (!logBox) return;
-      const line = document.createElement('div');
-      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      line.textContent = `[${nowStr}] ${msg}`;
-      logBox.prepend(line);
-    }
-
-    function initMsalIfConfigured() {
-      const redirectInput = document.getElementById('detected-redirect-uri');
-      if (redirectInput) {
-        const liveUrl = window.location.origin && window.location.origin !== 'null'
-          ? window.location.origin + window.location.pathname
-          : 'https://your-username.github.io/sunbeam/';
-        redirectInput.value = liveUrl;
-      }
-
-      const clientInput = document.getElementById('ms-client-id-input');
-      if (clientInput) clientInput.value = msClientId;
-
-      const pill = document.getElementById('graph-connection-pill');
-      const loginLabel = document.getElementById('ms-graph-login-label');
-
-      if (msClientId && window.msal && window.msal.PublicClientApplication) {
-        try {
-          msalInstance = new window.msal.PublicClientApplication({
-            auth: {
-              clientId: msClientId,
-              authority: 'https://login.microsoftonline.com/common',
-              redirectUri: window.location.origin && window.location.origin !== 'null'
-                ? window.location.origin + window.location.pathname
-                : 'https://localhost'
-            },
-            cache: { cacheLocation: 'localStorage' }
-          });
-          const accounts = msalInstance.getAllAccounts();
-          if (accounts && accounts.length > 0) {
-            msAccount = accounts[0];
-            if (pill) {
-              pill.textContent = `Connected: ${msAccount.username}`;
-              pill.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300';
-            }
-            if (loginLabel) loginLabel.textContent = 'Connected to Outlook';
-          } else if (pill) {
-            pill.textContent = 'Client ID Saved • Ready to Sign In';
-          }
-        } catch (err) {
-          appendSyncLog('MSAL init note: ' + err.message);
-        }
-      }
-    }
-
-    async function connectMicrosoftAccount() {
-      if (!msClientId) {
-        switchView('outlook');
-        const input = document.getElementById('ms-client-id-input');
-        if (input) input.focus();
-        appendSyncLog('Simulated Microsoft connection active (add your Azure Client ID for live GitHub Pages OAuth).');
-        showCelebration(false, 'Preview Mode: Simulated Outlook Auto-Sync is active! Add a task to see it sync automatically.', '⚡');
-        return;
-      }
-
-      initMsalIfConfigured();
-      if (!msalInstance) return;
-
-      try {
-        const loginRes = await msalInstance.loginPopup({
-          scopes: ['User.Read', 'Calendars.ReadWrite', 'Tasks.ReadWrite']
-        });
-        msAccount = loginRes.account;
-        msAccessToken = loginRes.accessToken;
-        outlookEmail = msAccount.username || outlookEmail;
-        saveState();
-        initMsalIfConfigured();
-        updateDashboard();
-        appendSyncLog(`Signed in as ${msAccount.username}`);
-        showCelebration(false, `Connected to Outlook (${msAccount.username})!`, '🔐');
-      } catch (err) {
-        appendSyncLog(`Sign-in note: ${err.message}`);
-        showCelebration(false, 'Sign-in requires hosting on your GitHub Pages HTTPS URL.', 'ℹ️');
-      }
-    }
-
-    async function getGraphToken() {
-      if (!msalInstance || !msAccount) return null;
-      try {
-        const res = await msalInstance.acquireTokenSilent({
-          scopes: ['Calendars.ReadWrite', 'Tasks.ReadWrite'],
-          account: msAccount
-        });
-        return res.accessToken;
-      } catch (e) {
-        try {
-          const res = await msalInstance.acquireTokenPopup({
-            scopes: ['Calendars.ReadWrite', 'Tasks.ReadWrite']
-          });
-          return res.accessToken;
-        } catch (err) {
-          return null;
-        }
-      }
-    }
-
-    async function autoPushTaskToOutlookGraph(task) {
-      const token = await getGraphToken();
-      const startIso = `${task.date || TODAY_YMD}T${task.time || '10:00'}:00`;
-      const parts = (task.time || '10:00').split(':');
-      const endH = String((parseInt(parts[0] || '10') + 1) % 24).padStart(2, '0');
-      const endIso = `${task.date || TODAY_YMD}T${endH}:${parts[1] || '00'}:00`;
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
-      if (token) {
-        try {
-          const response = await fetch('https://graph.microsoft.com/v1.0/me/events', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              subject: `☀️ ${task.text}`,
-              body: {
-                contentType: 'HTML',
-                content: `<p><b>Category:</b> ${task.category} | <b>Priority:</b> ${task.priority}</p><p>Automatically synced from Sunbeam Planner.</p>`
-              },
-              start: { dateTime: startIso, timeZone: tz },
-              end: { dateTime: endIso, timeZone: tz },
-              isReminderOn: !!task.reminder,
-              reminderMinutesBeforeStart: 15
-            })
-          });
-
-          if (response.ok) {
-            task.syncedToOutlook = true;
-            saveState();
-            render();
-            appendSyncLog(`✓ Live Graph API: Created "${task.text}" on Outlook Calendar (${task.date} ${task.time})`);
-            showCelebration(false, `Auto-synced "${task.text}" straight to your Outlook Calendar!`, '☁️');
-            return;
-          }
-        } catch (err) {
-          appendSyncLog(`Graph API error: ${err.message}`);
-        }
-      }
-
-      // Preview / Simulation Mode when testing before GitHub Pages Client ID is linked
-      task.syncedToOutlook = true;
-      saveState();
-      render();
-      appendSyncLog(`✓ Auto-Synced "${task.text}" (${task.date} at ${task.time}) -> Outlook Calendar`);
-      showCelebration(false, `Auto-synced "${task.text}" to Outlook Calendar!`, '☁️');
-    }
-
-    async function syncAllTasksToOutlookNow() {
-      const unsynced = tasks.filter(t => !t.syncedToOutlook);
-      if (unsynced.length === 0) {
-        appendSyncLog('All tasks are already marked as synced to your Outlook Calendar.');
-        showCelebration(false, 'All tasks are already synced to your calendar!', '☁️');
-        return;
-      }
-      for (const t of unsynced) {
-        await autoPushTaskToOutlookGraph(t);
-      }
-      sounds.playComplete();
-      showCelebration(false, `Auto-synced ${unsynced.length} plans to your Outlook Calendar!`, '🔄');
-    }
-
-    async function pullEventsFromOutlookCalendar() {
-      const token = await getGraphToken();
-      if (token) {
-        try {
-          const start = new Date(nowSystem);
-          start.setDate(1);
-          const end = new Date(nowSystem.getFullYear(), nowSystem.getMonth() + 1, 0);
-          const url = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$top=25`;
-          const res = await fetch(url, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            let added = 0;
-            (data.value || []).forEach(ev => {
-              const evId = 'graph-' + ev.id.slice(-8);
-              if (!tasks.some(t => t.id === evId)) {
-                const dt = ev.start && ev.start.dateTime ? new Date(ev.start.dateTime) : new Date();
-                tasks.unshift({
-                  id: evId,
-                  text: ev.subject || 'Outlook Event',
-                  date: formatYMD(dt),
-                  time: `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`,
-                  category: 'Work',
-                  priority: 'medium',
-                  reminder: true,
-                  completed: false,
-                  syncedToOutlook: true
-                });
-                added++;
-              }
-            });
-            saveState();
-            render();
-            appendSyncLog(`✓ Pulled ${added} events from live Outlook Calendar.`);
-            showCelebration(false, `Imported ${added} events from your Outlook Calendar!`, '📥');
-            return;
-          }
-        } catch (err) {
-          appendSyncLog(`Pull error: ${err.message}`);
-        }
-      }
-
-      // Demo pull for preview testing before live login
-      const sampleId = 'outlook-demo-' + Date.now().toString().slice(-4);
-      tasks.unshift({
-        id: sampleId,
-        text: 'Outlook Calendar: Team Sync & Coffee Catch-up',
-        date: TODAY_YMD,
-        time: '15:30',
-        category: 'Work',
-        priority: 'medium',
-        reminder: true,
-        completed: false,
-        syncedToOutlook: true
-      });
-      saveState();
-      render();
-      appendSyncLog('✓ Pulled "Team Sync & Coffee Catch-up" from Outlook Calendar into Today.');
-      sounds.playAdd();
-      showCelebration(false, 'Pulled upcoming event from Outlook Calendar into your planner!', '📥');
-    }
-
-    function snoozeTask(id) {
-      tasks = tasks.map(t => {
-        if (t.id === id) {
-          const parts = (t.time || '10:00').split(':');
-          let h = parseInt(parts[0]);
-          let m = parseInt(parts[1]) + 15;
-          if (m >= 60) {
-            m -= 60;
-            h = (h + 1) % 24;
-          }
-          const newTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-          showCelebration(false, `Nudge gently snoozed to ${newTime}`, '⏰');
-          return { ...t, time: newTime };
-        }
-        return t;
-      });
-      sounds.playAdd();
-      render();
-    }
-
-    // ==========================================
-    // GENTLE FOCUS TIMER & COZY EVENING THEME
-    // ==========================================
-    function applyEveningThemeUI() {
-      const themeIcon = document.getElementById('theme-icon');
-      const themeLabel = document.getElementById('theme-label');
-      if (isEveningMode) {
-        document.body.classList.add('evening-mode');
-        if (themeIcon) themeIcon.textContent = '☀️';
-        if (themeLabel) themeLabel.textContent = 'Daylight Mode';
-      } else {
-        document.body.classList.remove('evening-mode');
-        if (themeIcon) themeIcon.textContent = '🌙';
-        if (themeLabel) themeLabel.textContent = 'Evening Mode';
-      }
-    }
-
-    function toggleEveningTheme() {
-      isEveningMode = !isEveningMode;
-      applyEveningThemeUI();
-      saveState();
-      sounds.playAdd();
-      showCelebration(
-        false,
-        isEveningMode ? 'Cozy Evening Mode enabled — gentle twilight colors for night planning.' : 'Switched back to Warm Daylight Mode!',
-        isEveningMode ? '🌙' : '☀️'
-      );
-    }
-
-    function updateFocusTimerUI() {
-      const disp = document.getElementById('focus-timer-display');
-      const bar = document.getElementById('focus-timer-bar');
-      const startBtn = document.getElementById('timer-start-btn');
-      const badge = document.getElementById('focus-sessions-badge');
-
-      const mins = String(Math.floor(focusRemainingSeconds / 60)).padStart(2, '0');
-      const secs = String(focusRemainingSeconds % 60).padStart(2, '0');
-      if (disp) disp.textContent = `${mins}:${secs}`;
-
-      const elapsed = focusTotalSeconds - focusRemainingSeconds;
-      const pct = focusTotalSeconds > 0 ? Math.min(100, Math.round((elapsed / focusTotalSeconds) * 100)) : 0;
-      if (bar) bar.style.width = `${pct}%`;
-
-      if (startBtn) {
-        startBtn.textContent = focusIsRunning ? 'Pause Focus' : (focusRemainingSeconds < focusTotalSeconds ? 'Resume Focus' : 'Start Focus');
-      }
-      if (badge) {
-        badge.textContent = `${focusSessionsCompleted} ${focusSessionsCompleted === 1 ? 'session' : 'sessions'} today`;
-      }
-    }
-
-    function selectTaskForFocus(task) {
-      focusedTaskId = task.id;
-      const lbl = document.getElementById('focus-active-task-label');
-      if (lbl) {
-        lbl.innerHTML = `🎯 Focusing on: <span class="font-bold text-amber-900">${task.text}</span>`;
-      }
-      const statusEl = document.getElementById('focus-timer-status');
-      if (statusEl) {
-        statusEl.textContent = `Locked in on "${task.text}"`;
-      }
-      if (!focusIsRunning) {
-        toggleFocusTimer();
-      } else {
-        sounds.playAdd();
-        showCelebration(false, `Now focusing on: "${task.text}"`, '🍅');
-      }
-    }
-
-    function setFocusPresetMinutes(mins) {
-      if (focusIntervalId) {
-        clearInterval(focusIntervalId);
-        focusIntervalId = null;
-      }
-      focusIsRunning = false;
-      focusTotalSeconds = mins * 60;
-      focusRemainingSeconds = mins * 60;
-      const statusEl = document.getElementById('focus-timer-status');
-      if (statusEl) {
-        statusEl.textContent = mins === 5 ? 'Enjoy a calm 5-minute breather ☕' : `Set for a gentle ${mins}-minute focus block`;
-      }
-      updateFocusTimerUI();
-    }
-
-    function completeFocusSession() {
-      if (focusIntervalId) {
-        clearInterval(focusIntervalId);
-        focusIntervalId = null;
-      }
-      focusIsRunning = false;
-      focusSessionsCompleted += 1;
-      focusRemainingSeconds = focusTotalSeconds;
-
-      // If a task was selected for focus and isn't completed yet, mark it completed!
-      if (focusedTaskId) {
-        const target = tasks.find(t => t.id === focusedTaskId);
-        if (target && !target.completed) {
-          target.completed = true;
-        }
-      }
-
-      const statusEl = document.getElementById('focus-timer-status');
-      if (statusEl) {
-        statusEl.textContent = 'Session complete! Take a stretch and a sip of water 🌻';
-      }
-
-      sounds.playFanfare();
-      triggerConfetti(true);
-      showCelebration(false, `Focus session #${focusSessionsCompleted} complete! Wonderful concentration.`, '🍅');
-      updateFocusTimerUI();
-      render();
-    }
-
-    function toggleFocusTimer() {
-      const statusEl = document.getElementById('focus-timer-status');
-      if (focusIsRunning) {
-        if (focusIntervalId) {
-          clearInterval(focusIntervalId);
-          focusIntervalId = null;
-        }
-        focusIsRunning = false;
-        if (statusEl) statusEl.textContent = 'Timer paused — take your time.';
-        updateFocusTimerUI();
-        return;
-      }
-
-      // Always clear any existing interval before starting a new one
-      if (focusIntervalId) {
-        clearInterval(focusIntervalId);
-        focusIntervalId = null;
-      }
-      focusIsRunning = true;
-      sounds.playAdd();
-      if (statusEl) statusEl.textContent = 'In gentle focus flow... you got this ✨';
-      updateFocusTimerUI();
-
-      focusIntervalId = setInterval(() => {
-        if (focusRemainingSeconds > 1) {
-          focusRemainingSeconds -= 1;
-          updateFocusTimerUI();
-        } else {
-          completeFocusSession();
-        }
-      }, 1000);
-    }
-
-    function resetFocusTimer() {
-      if (focusIntervalId) {
-        clearInterval(focusIntervalId);
-        focusIntervalId = null;
-      }
-      focusIsRunning = false;
-      focusRemainingSeconds = focusTotalSeconds;
-      const statusEl = document.getElementById('focus-timer-status');
-      if (statusEl) statusEl.textContent = 'Timer reset — ready when you are';
-      updateFocusTimerUI();
-    }
-
-    function parseSubtasksInput() {
-      const el = document.getElementById('task-subtasks-input');
-      if (!el || !el.value.trim()) return [];
-      return el.value
-        .split(',')
-        .map(part => part.trim())
-        .filter(Boolean)
-        .map((txt, i) => ({
-          id: `st-${Date.now()}-${i}`,
-          text: txt,
-          done: false
-        }));
-    }
-
-    function addSubtaskToTask(taskId, stepText) {
-      const trimmed = (stepText || '').trim();
-      if (!trimmed) return;
-      tasks = tasks.map(t => {
-        if (t.id === taskId) {
-          const existing = Array.isArray(t.subtasks) ? t.subtasks : [];
-          return {
-            ...t,
-            subtasks: [...existing, { id: 'st-' + Date.now(), text: trimmed, done: false }]
-          };
-        }
-        return t;
-      });
-      sounds.playAdd();
-      render();
-    }
-
-    function toggleSubtask(taskId, subId) {
-      let allSubsNowDone = false;
-      tasks = tasks.map(t => {
-        if (t.id === taskId && Array.isArray(t.subtasks)) {
-          const updatedSubs = t.subtasks.map(st => st.id === subId ? { ...st, done: !st.done } : st);
-          allSubsNowDone = updatedSubs.length > 0 && updatedSubs.every(st => st.done);
-          return {
-            ...t,
-            subtasks: updatedSubs,
-            completed: allSubsNowDone ? true : t.completed
-          };
-        }
-        return t;
-      });
-
-      if (allSubsNowDone) {
-        sounds.playComplete();
-        triggerConfetti(false);
-        showCelebration(false, 'All sub-steps finished! Main plan marked complete.', '🎉');
-      } else {
-        sounds.playAdd();
-      }
-      render();
-    }
-
-    function deleteSubtask(taskId, subId) {
-      tasks = tasks.map(t => {
-        if (t.id === taskId && Array.isArray(t.subtasks)) {
-          return {
-            ...t,
-            subtasks: t.subtasks.filter(st => st.id !== subId)
-          };
-        }
-        return t;
-      });
-      render();
-    }
-
-    function render() {
-      updateDashboard();
-
-      if (activeView === 'day') renderDayView();
-      else if (activeView === 'week') renderWeekView();
-      else if (activeView === 'month') renderMonthView();
-      else if (activeView === 'analysis') renderAnalysisView();
-      else if (activeView === 'reminders') renderRemindersView();
-      else if (activeView === 'outlook') renderOutlookView();
-
-      saveState();
-    }
-
-    function switchView(viewName) {
-      activeView = viewName;
-
-      viewDayContainer.classList.add('hidden');
-      viewWeekContainer.classList.add('hidden');
-      viewMonthContainer.classList.add('hidden');
-      viewAnalysisContainer.classList.add('hidden');
-      viewRemindersContainer.classList.add('hidden');
-      if (viewOutlookContainer) viewOutlookContainer.classList.add('hidden');
-
-      if (viewName === 'day') viewDayContainer.classList.remove('hidden');
-      else if (viewName === 'week') viewWeekContainer.classList.remove('hidden');
-      else if (viewName === 'month') viewMonthContainer.classList.remove('hidden');
-      else if (viewName === 'analysis') viewAnalysisContainer.classList.remove('hidden');
-      else if (viewName === 'reminders') viewRemindersContainer.classList.remove('hidden');
-      else if (viewName === 'outlook' && viewOutlookContainer) viewOutlookContainer.classList.remove('hidden');
-
-      navTabs.forEach(tab => {
-        if (tab.getAttribute('data-view') === viewName) {
-          tab.classList.remove('text-stone-600', 'hover:bg-white/60', 'font-semibold');
-          tab.classList.add('bg-white', 'text-amber-900', 'shadow-sm', 'font-bold');
-        } else {
-          tab.classList.remove('bg-white', 'text-amber-900', 'shadow-sm', 'font-bold');
-          tab.classList.add('text-stone-600', 'hover:bg-white/60', 'font-semibold');
-        }
-      });
-
-      render();
-    }
-
-    function addTask(text, date, time, category, priority, reminder, recurrence) {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-
-      const baseDate = date || selectedDate;
-      const recur = recurrence || (taskRecurSelect ? taskRecurSelect.value : 'none');
-      const datesToCreate = [baseDate];
-
-      if (recur === 'daily') {
-        const parts = baseDate.split('-');
-        const startD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        for (let i = 1; i <= 6; i++) {
-          const nextD = new Date(startD);
-          nextD.setDate(startD.getDate() + i);
-          datesToCreate.push(formatYMD(nextD));
-        }
-      } else if (recur === 'weekly') {
-        const parts = baseDate.split('-');
-        const startD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        for (let i = 1; i <= 3; i++) {
-          const nextD = new Date(startD);
-          nextD.setDate(startD.getDate() + (i * 7));
-          if (nextD.getMonth() === startD.getMonth()) {
-            datesToCreate.push(formatYMD(nextD));
-          }
-        }
-      }
-
-      const autoSyncCheck = document.getElementById('task-autosync-check');
-      const shouldAutoSync = autoSyncCheck ? autoSyncCheck.checked : true;
-      const createdTasks = [];
-
-      datesToCreate.forEach((targetDate, idx) => {
-        const newObj = {
-          id: (Date.now() + idx).toString(),
-          text: recur !== 'none' ? `${trimmed} (${recur})` : trimmed,
-          date: targetDate,
-          time: time || '10:00',
-          category: category || 'Work',
-          priority: priority || selectedPriority || 'medium',
-          reminder: !!reminder,
-          completed: false,
-          syncedToOutlook: false,
-          subtasks: parseSubtasksInput()
-        };
-        tasks.unshift(newObj);
-        createdTasks.push(newObj);
-      });
-
-      sounds.playAdd();
-      render();
-
-      if (shouldAutoSync) {
-        createdTasks.forEach(t => autoPushTaskToOutlookGraph(t));
-      } else {
-        showCelebration(false, `Added to your plans for ${baseDate}!`, '🌻');
-      }
-    }
-
-    function exportTasksToCSV() {
-      const headers = ['ID', 'Task', 'Date', 'Time', 'Category', 'Priority', 'Completed', 'Reminder'];
-      const rows = tasks.map(t => [
-        t.id,
-        `"${(t.text || '').replace(/"/g, '""')}"`,
-        t.date,
-        t.time || '',
-        t.category || 'Work',
-        t.priority || 'medium',
-        t.completed ? 'Yes' : 'No',
-        t.reminder ? 'Yes' : 'No'
-      ]);
-      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sunbeam_schedule_${selectedDate}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      sounds.playAdd();
-      showCelebration(false, 'Exported your full schedule to CSV!', '📥');
-    }
-
-    function exportFullJSONBackup() {
-      const payload = {
-        app: 'Sunbeam Human Rhythm Planner',
-        exportedAt: new Date().toISOString(),
-        userName,
-        userMood,
-        dailyIntention,
-        outlookEmail,
-        isEveningMode,
-        focusSessionsCompleted,
-        tasks
-      };
-      const jsonStr = JSON.stringify(payload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sunbeam_backup_${TODAY_YMD}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      const statusEl = document.getElementById('json-backup-status');
-      if (statusEl) {
-        statusEl.textContent = `✓ Downloaded sunbeam_backup_${TODAY_YMD}.json (${tasks.length} plans saved).`;
-      }
-      sounds.playComplete();
-      showCelebration(false, 'Downloaded your full Sunbeam .JSON backup!', '💾');
-    }
-
-    function importFullJSONBackup(file) {
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const parsed = JSON.parse(ev.target.result);
-          if (Array.isArray(parsed.tasks)) {
-            tasks = parsed.tasks;
-          } else if (Array.isArray(parsed)) {
-            tasks = parsed;
-          } else {
-            showCelebration(false, 'That JSON file did not contain a valid tasks list.', '⚠️');
-            return;
-          }
-          if (typeof parsed.userName === 'string') userName = parsed.userName;
-          if (typeof parsed.userMood === 'string') userMood = parsed.userMood;
-          if (typeof parsed.dailyIntention === 'string') {
-            dailyIntention = parsed.dailyIntention;
-            if (dailyIntentionInput) dailyIntentionInput.value = dailyIntention;
-          }
-          if (typeof parsed.outlookEmail === 'string') outlookEmail = parsed.outlookEmail;
-          if (typeof parsed.isEveningMode === 'boolean') {
-            isEveningMode = parsed.isEveningMode;
-            applyEveningThemeUI();
-          }
-          if (typeof parsed.focusSessionsCompleted === 'number') {
-            focusSessionsCompleted = parsed.focusSessionsCompleted;
-            updateFocusTimerUI();
-          }
-          saveState();
-          render();
-          const statusEl = document.getElementById('json-backup-status');
-          if (statusEl) {
-            statusEl.textContent = `✓ Restored ${tasks.length} plans from ${file.name}!`;
-          }
-          sounds.playFanfare();
-          triggerConfetti(true);
-          showCelebration(false, `Restored ${tasks.length} plans and settings from backup!`, '🎉');
-        } catch (err) {
-          showCelebration(false, 'Could not read JSON file — please check the file format.', '⚠️');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function downloadReadyIndexHtml() {
-      const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'index.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      sounds.playComplete();
-      showCelebration(false, 'Downloaded index.html — ready to upload to GitHub Pages!', '🚀');
-    }
-
-    function toggleTask(id) {
-      let isNowCompleted = false;
-      let totalCount = tasks.length;
-
-      tasks = tasks.map(task => {
-        if (task.id === id) {
-          const nextState = !task.completed;
-          if (nextState) isNowCompleted = true;
-          return { ...task, completed: nextState };
-        }
-        return task;
-      });
-
-      if (isNowCompleted) {
-        const nextCompletedCount = tasks.filter(t => t.completed).length;
-        const reached100 = totalCount > 0 && nextCompletedCount === totalCount;
-
-        if (reached100) {
-          sounds.playFanfare();
-          triggerConfetti(true);
-          showCelebration(true);
-        } else {
-          sounds.playComplete();
-          triggerConfetti(false);
-          showCelebration(false);
-        }
-      }
-
-      render();
-    }
-
-    function deleteTask(id) {
-      tasks = tasks.filter(task => task.id !== id);
-      sounds.playDelete();
-      render();
-    }
-
-    function clearCompleted() {
-      const prevLength = tasks.length;
-      tasks = tasks.filter(task => !task.completed);
-      if (tasks.length < prevLength) {
-        sounds.playDelete();
-      }
-      render();
-    }
-
-    // ==========================================
-    // EVENT LISTENERS
-    // ==========================================
-    taskForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      addTask(
-        taskInput.value,
-        taskDateInput.value,
-        taskTimeInput.value,
-        taskCategorySelect.value,
-        selectedPriority,
-        taskReminderCheck.checked,
-        taskRecurSelect ? taskRecurSelect.value : 'none'
-      );
-      taskInput.value = '';
-      const subInputEl = document.getElementById('task-subtasks-input');
-      if (subInputEl) subInputEl.value = '';
-      if (taskRecurSelect) taskRecurSelect.value = 'none';
-      taskInput.focus();
-    });
-
-    if (exportCsvBtn) {
-      exportCsvBtn.addEventListener('click', exportTasksToCSV);
-    }
-
-    priorityChips.forEach(chip => {
-      chip.addEventListener('click', () => {
-        priorityChips.forEach(c => {
-          c.classList.remove('bg-rose-50', 'bg-amber-50', 'bg-emerald-50', 'shadow-xs', 'font-bold');
-          c.classList.add('bg-white', 'font-medium');
-        });
-
-        const p = chip.getAttribute('data-priority');
-        selectedPriority = p;
-        chip.classList.remove('bg-white', 'font-medium');
-        chip.classList.add('shadow-xs', 'font-bold');
-
-        if (p === 'high') chip.classList.add('bg-rose-50');
-        else if (p === 'low') chip.classList.add('bg-emerald-50');
-        else chip.classList.add('bg-amber-50');
-      });
-    });
-
-    filterTabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        filterTabs.forEach(t => {
-          t.classList.remove('bg-stone-800', 'text-white', 'font-bold');
-          t.classList.add('text-stone-600', 'hover:bg-stone-200/60', 'font-semibold');
-        });
-
-        tab.classList.remove('text-stone-600', 'hover:bg-stone-200/60', 'font-semibold');
-        tab.classList.add('bg-stone-800', 'text-white', 'font-bold');
-
-        currentFilter = tab.getAttribute('data-filter');
-        renderDayView();
-      });
-    });
-
-    clearCompletedBtn.addEventListener('click', clearCompleted);
-
-    navTabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const targetView = tab.getAttribute('data-view');
-        switchView(targetView);
-      });
-    });
-
-    // Day navigation
-    dayPrevBtn.addEventListener('click', () => {
-      const parts = selectedDate.split('-');
-      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      d.setDate(d.getDate() - 1);
-      selectedDate = formatYMD(d);
-      taskDateInput.value = selectedDate;
-      render();
-    });
-
-    dayNextBtn.addEventListener('click', () => {
-      const parts = selectedDate.split('-');
-      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-      d.setDate(d.getDate() + 1);
-      selectedDate = formatYMD(d);
-      taskDateInput.value = selectedDate;
-      render();
-    });
-
-    jumpTodayBtn.addEventListener('click', () => {
-      selectedDate = TODAY_YMD;
-      taskDateInput.value = TODAY_YMD;
-      render();
-    });
-
-    // Week navigation
-    document.getElementById('week-prev-btn').addEventListener('click', () => {
-      currentWeekOffset -= 1;
-      renderWeekView();
-    });
-    document.getElementById('week-today-btn').addEventListener('click', () => {
-      currentWeekOffset = 0;
-      renderWeekView();
-    });
-    document.getElementById('week-next-btn').addEventListener('click', () => {
-      currentWeekOffset += 1;
-      renderWeekView();
-    });
-
-    // Month navigation
-    document.getElementById('month-prev-btn').addEventListener('click', () => {
-      currentMonthYear.month -= 1;
-      if (currentMonthYear.month < 0) {
-        currentMonthYear.month = 11;
-        currentMonthYear.year -= 1;
-      }
-      renderMonthView();
-    });
-    document.getElementById('month-today-btn').addEventListener('click', () => {
-      currentMonthYear.year = nowSystem.getFullYear();
-      currentMonthYear.month = nowSystem.getMonth();
-      renderMonthView();
-    });
-    document.getElementById('month-next-btn').addEventListener('click', () => {
-      currentMonthYear.month += 1;
-      if (currentMonthYear.month > 11) {
-        currentMonthYear.month = 0;
-        currentMonthYear.year += 1;
-      }
-      renderMonthView();
-    });
-
-    // Personalize Name
-    editNameBtn.addEventListener('click', () => {
-      nameEditorRow.classList.toggle('hidden');
-      userNameInput.value = userName === 'friend' ? '' : userName;
-      userNameInput.focus();
-    });
-
-    saveNameBtn.addEventListener('click', () => {
-      const val = userNameInput.value.trim();
-      if (val) {
-        userName = val;
-        saveState();
-        updateDashboard();
-        showCelebration(false, `Lovely to meet you, ${userName}!`, '🌻');
-      }
-      nameEditorRow.classList.add('hidden');
-    });
-
-    // Daily intention input
-    dailyIntentionInput.addEventListener('input', (e) => {
-      dailyIntention = e.target.value;
-      saveState();
-    });
-
-    // Mood buttons
-    moodBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        moodBtns.forEach(b => {
-          b.classList.remove('bg-amber-100', 'font-bold', 'text-amber-900');
-          b.classList.add('text-stone-600');
-        });
-        btn.classList.add('bg-amber-100', 'font-bold', 'text-amber-900');
-        userMood = btn.getAttribute('data-mood');
-        saveState();
-        showCelebration(false, 'Honoring your energy pace today!', '🌿');
-      });
-    });
-
-    // Outlook Sync listeners
-    saveOutlookEmailBtn.addEventListener('click', () => {
-      outlookEmail = outlookEmailInput.value.trim();
-      saveState();
-      updateDashboard();
-      showCelebration(false, outlookEmail ? `Saved Outlook address: ${outlookEmail}` : 'Cleared Outlook address', '📧');
-    });
-
-    outlookWebComposeBtn.addEventListener('click', openOutlookWebCompose);
-    outlookMailtoBtn.addEventListener('click', openOutlookMailto);
-    downloadIcsBtn.addEventListener('click', downloadOutlookICS);
-
-    quickEmailOutlookBtn.addEventListener('click', () => {
-      if (!outlookEmail) {
-        switchView('outlook');
-        outlookEmailInput.focus();
-        showCelebration(false, 'Enter your Outlook email here first!', '📧');
-      } else {
-        openOutlookWebCompose();
-      }
-    });
-
-    quickIcsOutlookBtn.addEventListener('click', downloadOutlookICS);
-
-    copyDigestBtn.addEventListener('click', () => {
-      const text = buildOutlookDigestText();
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => {});
-      }
-      showCelebration(false, 'Copied Outlook task digest to clipboard!', '📋');
-    });
-
-    testReminderAlertBtn.addEventListener('click', () => {
-      sounds.playReminder();
-      showCelebration(false, 'Gentle nudge: Time to check your main priority!', '🔔');
-    });
-
-    soundToggleBtn.addEventListener('click', () => {
-      sounds.enabled = !sounds.enabled;
-      if (sounds.enabled) {
-        sounds.init();
-        soundIcon.textContent = '🔊';
-        soundLabel.textContent = 'Sound On';
-        soundToggleBtn.classList.remove('opacity-60');
-      } else {
-        soundIcon.textContent = '🔇';
-        soundLabel.textContent = 'Muted';
-        soundToggleBtn.classList.add('opacity-60');
-      }
-    });
-
-    // Initialize
-    // Wire Microsoft Graph Auto-Sync controls
-    const msLoginBtn = document.getElementById('ms-graph-login-btn');
-    const msSyncNowBtn = document.getElementById('ms-graph-sync-now-btn');
-    const msPullBtn = document.getElementById('ms-graph-pull-btn');
-    const saveClientIdBtn = document.getElementById('save-client-id-btn');
-    const copyRedirectBtn = document.getElementById('copy-redirect-uri-btn');
-
-    if (msLoginBtn) msLoginBtn.addEventListener('click', connectMicrosoftAccount);
-    if (msSyncNowBtn) msSyncNowBtn.addEventListener('click', syncAllTasksToOutlookNow);
-    if (msPullBtn) msPullBtn.addEventListener('click', pullEventsFromOutlookCalendar);
-
-    if (saveClientIdBtn) {
-      saveClientIdBtn.addEventListener('click', () => {
-        const val = document.getElementById('ms-client-id-input').value.trim();
-        msClientId = val;
-        saveState();
-        initMsalIfConfigured();
-        appendSyncLog(val ? `Saved Microsoft Client ID: ${val.slice(0, 8)}...` : 'Switched back to Preview Simulation Mode');
-        showCelebration(false, val ? 'Saved your Microsoft Client ID! Click Connect Microsoft Account to sign in.' : 'Cleared Client ID', '🔐');
-      });
-    }
-
-    if (copyRedirectBtn) {
-      copyRedirectBtn.addEventListener('click', () => {
-        const uri = document.getElementById('detected-redirect-uri').value;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(uri).catch(() => {});
-        }
-        showCelebration(false, 'Copied Redirect URI for your Azure App registration!', '📋');
-      });
-    }
-
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const timerStartBtn = document.getElementById('timer-start-btn');
-    const timerResetBtn = document.getElementById('timer-reset-btn');
-    const timerFinishBtn = document.getElementById('timer-finish-btn');
-    const timerPresetBtns = document.querySelectorAll('.timer-preset-btn');
-
-    if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleEveningTheme);
-    if (timerStartBtn) timerStartBtn.addEventListener('click', toggleFocusTimer);
-    if (timerResetBtn) timerResetBtn.addEventListener('click', resetFocusTimer);
-    if (timerFinishBtn) timerFinishBtn.addEventListener('click', completeFocusSession);
-
-    timerPresetBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        timerPresetBtns.forEach(b => {
-          b.classList.remove('bg-amber-500', 'text-white', 'font-bold', 'shadow-xs');
-          b.classList.add('bg-stone-100', 'text-stone-700', 'font-semibold');
-        });
-        btn.classList.remove('bg-stone-100', 'text-stone-700', 'font-semibold');
-        btn.classList.add('bg-amber-500', 'text-white', 'font-bold', 'shadow-xs');
-        const mins = parseInt(btn.getAttribute('data-minutes') || '25', 10);
-        setFocusPresetMinutes(mins);
-      });
-    });
-
-    const taskSearchInput = document.getElementById('task-search-input');
-    const clearSearchBtn = document.getElementById('clear-search-btn');
-    const searchAllDatesCheck = document.getElementById('search-all-dates-check');
-    const printSheetBtn = document.getElementById('print-sheet-btn');
-
-    if (taskSearchInput) {
-      taskSearchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        renderDayView();
-      });
-    }
-
-    if (clearSearchBtn) {
-      clearSearchBtn.addEventListener('click', () => {
-        searchQuery = '';
-        if (taskSearchInput) taskSearchInput.value = '';
-        renderDayView();
-      });
-    }
-
-    if (searchAllDatesCheck) {
-      searchAllDatesCheck.addEventListener('change', (e) => {
-        searchAllDates = e.target.checked;
-        renderDayView();
-      });
-    }
-
-    if (printSheetBtn) {
-      printSheetBtn.addEventListener('click', () => {
-        showCelebration(false, 'Opening clean print view for your planner...', '🖨️');
-        setTimeout(() => window.print(), 250);
-      });
-    }
-
-    const openLaunchHubBtn = document.getElementById('open-launch-hub-btn');
-    const exportJsonBtn = document.getElementById('export-json-btn');
-    const importJsonBtn = document.getElementById('import-json-btn');
-    const importJsonInput = document.getElementById('import-json-input');
-    const downloadIndexHtmlBtn = document.getElementById('download-index-html-btn');
-    const launchStepChecks = document.querySelectorAll('.launch-step-check');
-
-    if (openLaunchHubBtn) {
-      openLaunchHubBtn.addEventListener('click', () => {
-        switchView('outlook');
-        const card = document.getElementById('backup-launch-card');
-        if (card && card.scrollIntoView) {
-          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    }
-
-    if (exportJsonBtn) {
-      exportJsonBtn.addEventListener('click', exportFullJSONBackup);
-    }
-
-    if (importJsonBtn && importJsonInput) {
-      importJsonBtn.addEventListener('click', () => importJsonInput.click());
-      importJsonInput.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          importFullJSONBackup(file);
-          importJsonInput.value = '';
-        }
-      });
-    }
-
-    if (downloadIndexHtmlBtn) {
-      downloadIndexHtmlBtn.addEventListener('click', downloadReadyIndexHtml);
-    }
-
-    launchStepChecks.forEach(chk => {
-      chk.addEventListener('change', () => {
-        const totalSteps = launchStepChecks.length;
-        const doneSteps = Array.from(launchStepChecks).filter(c => c.checked).length;
-        const progBadge = document.getElementById('launch-checklist-progress');
-        if (progBadge) progBadge.textContent = `${doneSteps}/${totalSteps} steps`;
-        if (doneSteps === totalSteps) {
-          sounds.playFanfare();
-          triggerConfetti(true);
-          showCelebration(false, 'Congratulations on launching your first web app on GitHub Pages!', '🚀');
-        } else {
-          sounds.playAdd();
-        }
-      });
-    });
-
-    loadSavedState();
-    applyEveningThemeUI();
-    updateFocusTimerUI();
-    initMsalIfConfigured();
-    taskDateInput.value = TODAY_YMD;
-    dailyIntentionInput.value = dailyIntention;
-    switchView('day');
-  </script>
+  <footer class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8 text-[11px] text-stone-400 text-center no-print">
+    Your plans are saved in this browser. Use Data → Download backup to move them to another device.
+  </footer>
+
+  <script src="config.js" defer></script>
+  <script src="assets/js/sound.js" defer></script>
+  <script src="assets/js/outlook.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
 </body>
 </html>

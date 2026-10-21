@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sunbeam Setup Guide</title>
+<style>
+  :root {
+    --bg: #FAF6F0; --card: #FFFFFF; --ink: #2D2A26; --muted: #78716C; --line: #EFE8DC;
+    --accent: #D97706; --accent-soft: #FEF3C7; --sky: #0369A1; --sky-soft: #E0F2FE;
+    --rose: #BE123C; --rose-soft: #FFE4E6; --code: #F5F0E8; --ok: #047857;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1A1715; --card: #25211E; --ink: #F3EDE2; --muted: #B5A897; --line: #38312C;
+      --accent: #F59E0B; --accent-soft: #3A2C14; --sky: #7DD3FC; --sky-soft: #10293A;
+      --rose: #FDA4AF; --rose-soft: #3B1820; --code: #1D1A17; --ok: #6EE7B7;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 'Segoe UI', system-ui, sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-family: Georgia, serif; font-size: 30px; margin: 0 0 4px; }
+  h2 { font-family: Georgia, serif; font-size: 20px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+  .step { counter-increment: step; }
+  .step h2::before { content: counter(step); display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font: 700 14px system-ui; flex-shrink: 0; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px; margin-bottom: 18px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 6px 0; }
+  code { background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font: 13px Consolas, monospace; word-break: break-all; }
+  .copy { display: flex; gap: 8px; align-items: stretch; margin: 8px 0; }
+  .copy pre { flex: 1; margin: 0; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 13px/1.5 Consolas, monospace; white-space: pre-wrap; word-break: break-all; min-width: 0; }
+  button { cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 10px; padding: 0 14px; font: 600 13px system-ui; }
+  button:hover { border-color: var(--accent); }
+  .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .inputs { grid-template-columns: 1fr; } }
+  label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+  input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--code); color: var(--ink); font: 14px system-ui; }
+  .note { border-radius: 12px; padding: 12px 14px; margin: 12px 0 0; font-size: 14px; }
+  .note.warn { background: var(--rose-soft); color: var(--rose); }
+  .note.tip { background: var(--sky-soft); color: var(--sky); }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tabs button { height: 34px; }
+  .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tree { font: 13px/1.7 Consolas, monospace; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; }
+  .tree span { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .hidden { display: none; }
+  .ok { color: var(--ok); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>☀️ Sunbeam setup</h1>
+  <p class="lead">Put the planner on GitHub Pages, then link it to your Outlook calendar and email. Type your details once and every URL and command below fills in.</p>
+
+  <section>
+    <div class="inputs">
+      <div><label for="user">GitHub username</label><input id="user" placeholder="e.g. jimmyhalim" autocomplete="off"></div>
+      <div><label for="repo">Repository name</label><input id="repo" value="sunbeam-planner" autocomplete="off"></div>
+    </div>
+  </section>
+
+  <div style="counter-reset: step">
+
+  <section class="step">
+    <h2>The files you upload</h2>
+    <p>Everything in <code>E:\Sunbeam</code> goes in the repository, exactly as laid out here. <code>index.html</code> must sit at the top level.</p>
+    <div class="tree">
+index.html            <span>← the planner page</span>
+auth-redirect.html    <span>← Microsoft returns here after sign-in</span>
+config.js             <span>← your Microsoft client ID goes here</span>
+README.md             <span>← instructions shown on GitHub</span>
+.gitignore
+assets/
+  css/styles.css
+  js/app.js           <span>← planner logic</span>
+  js/outlook.js       <span>← Microsoft sign-in + calendar/email</span>
+  js/sound.js         <span>← chimes</span>
+    </div>
+    <p style="margin-bottom:0">Leave out <code>setup-guide.html</code> (this page). It's only for you, and git already ignores it.</p>
+  </section>
+
+  <section class="step">
+    <h2>Create the repository and upload</h2>
+    <ol>
+      <li>On GitHub, click <strong>+ → New repository</strong>. Name it <code class="v-repo">sunbeam-planner</code>, keep it <strong>Public</strong>, don't add a README, and click <strong>Create repository</strong>.</li>
+      <li>Upload the files one of two ways:</li>
+    </ol>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="git">With git (recommended)</button>
+      <button role="tab" aria-selected="false" data-tab="web">In the browser</button>
+    </div>
+    <div id="tab-git">
+      <p>The repository is already set up with its first commit. In a terminal:</p>
+      <div class="copy"><pre id="git-cmds"></pre><button data-copy="git-cmds">Copy</button></div>
+      <p style="margin:0;color:var(--muted);font-size:14px">The first push opens a GitHub sign-in window.</p>
+    </div>
+    <div id="tab-web" class="hidden">
+      <ol>
+        <li>On the empty repository page, click <strong>uploading an existing file</strong>.</li>
+        <li>In File Explorer, open <code>E:\Sunbeam</code>, select <code>index.html</code>, <code>auth-redirect.html</code>, <code>config.js</code>, <code>README.md</code> and the <code>assets</code> folder, and drag them all onto the page. Dragging the folder keeps its structure.</li>
+        <li>Click <strong>Commit changes</strong>.</li>
+      </ol>
+      <p class="note tip">Windows hides <code>.gitignore</code> from drag-and-drop by default. The site works without it.</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <h2>Turn on GitHub Pages</h2>
+    <ol>
+      <li>In the repository, open <strong>Settings → Pages</strong>.</li>
+      <li>Under <em>Build and deployment</em>, set Source to <strong>Deploy from a branch</strong>, then pick <strong>main</strong> and <strong>/ (root)</strong>, and click <strong>Save</strong>.</li>
+      <li>Wait a minute or two, then open your site:</li>
+    </ol>
+    <div class="copy"><pre id="site-url"></pre><button data-copy="site-url">Copy</button></div>
+    <p style="margin-bottom:0">The planner works at this point. The next steps connect Outlook.</p>
+  </section>
+
+  <section class="step">
+    <h2>Register Sunbeam with Microsoft</h2>
+    <p>Sign in with your work account (<code>@cef-eg.org</code>) at <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener">Microsoft Entra → App registrations</a> and click <strong>+ New registration</strong>.</p>
+    <table>
+      <tr><th>Field</th><th>Enter</th></tr>
+      <tr><td>Name</td><td><code>Sunbeam Planner</code></td></tr>
+      <tr><td>Supported account types</td><td><strong>Accounts in this organizational directory only</strong> (single tenant)</td></tr>
+      <tr><td>Redirect URI → platform</td><td><strong>Single-page application (SPA)</strong>. Not "Web"; that type causes error AADSTS9002326.</td></tr>
+      <tr><td>Redirect URI → value</td><td><div class="copy" style="margin:0"><pre id="redirect-uri"></pre><button data-copy="redirect-uri">Copy</button></div></td></tr>
+    </table>
+    <p>Click <strong>Register</strong>. On the Overview page, copy two values:</p>
+    <ul>
+      <li><strong>Application (client) ID</strong>: you'll paste it in step 6.</li>
+      <li><strong>Directory (tenant) ID</strong>: optional. Your domain <code>cef-eg.org</code> works in its place.</li>
+    </ul>
+    <p class="note warn">If you see "You do not have access to create applications", your organisation only lets admins register apps. Send your IT admin steps 4–5 of this page, or ask them to register it and give you the client ID.</p>
+  </section>
+
+  <section class="step">
+    <h2>Give it calendar and email permissions</h2>
+    <ol>
+      <li>In the app registration, open <strong>API permissions → + Add a permission → Microsoft Graph → Delegated permissions</strong>.</li>
+      <li>Search for and tick <code>Calendars.ReadWrite</code> and <code>Mail.Send</code>, then click <strong>Add permissions</strong>. <code>User.Read</code> is already there.</li>
+      <li>If you're an admin, click <strong>Grant admin consent for &lt;your organisation&gt;</strong>. If you aren't, you can try signing in first; many organisations allow users to approve these permissions themselves.</li>
+    </ol>
+    <p class="note tip">Delegated permissions only let Sunbeam act as <em>you</em> while you're signed in: your own calendar, and email sent from your own mailbox. It can't read your inbox.</p>
+  </section>
+
+  <section class="step">
+    <h2>Put the client ID in <code>config.js</code></h2>
+    <p>Replace the contents of <code>config.js</code> with this (paste your real client ID):</p>
+    <div class="copy"><pre id="config-snippet"></pre><button data-copy="config-snippet">Copy</button></div>
+    <p>Then publish the change:</p>
+    <ul>
+      <li><strong>With git:</strong> edit <code>E:\Sunbeam\config.js</code>, then run <code>git commit -am "Add client ID"</code> and <code>git push</code>.</li>
+      <li><strong>In the browser:</strong> open <code>config.js</code> on GitHub, click the ✏️ pencil, paste, and click <strong>Commit changes</strong>.</li>
+    </ul>
+    <p class="note warn" style="margin-bottom:0">Keep the <code>cef-eg.org</code> authority line. Because you registered the app for your organisation only, the default <code>common</code> address gets rejected with error AADSTS50194.</p>
+  </section>
+
+  <section class="step">
+    <h2>Connect in the app</h2>
+    <ol>
+      <li>Open your site. Wait a minute after pushing, then press Ctrl+F5 to load the new <code>config.js</code>.</li>
+      <li>Go to the <strong>Outlook</strong> tab and click <strong>Connect Microsoft account</strong>.</li>
+      <li>A popup asks you to sign in and approve the permissions. Click <strong>Accept</strong>.</li>
+      <li>The badge turns green: <span class="ok">Connected · you@cef-eg.org</span>.</li>
+      <li>Try it: add a plan with <em>Add to my Outlook calendar</em> ticked and check that it appears in Outlook. Click <strong>Send now</strong> to email yourself today's plan, and <strong>Import Outlook events</strong> to pull in your meetings.</li>
+      <li>Optional: tick <strong>Import on startup</strong>. Under Reminders, click <strong>Enable desktop alerts</strong>.</li>
+    </ol>
+  </section>
+
+  </div>
+
+  <section>
+    <h2>🧰 If something goes wrong</h2>
+    <table>
+      <tr><th>You see</th><th>Fix</th></tr>
+      <tr><td>Nothing happens / "popup blocked"</td><td>Allow popups for your <code>github.io</code> site (icon at the right of the address bar), then click Connect again.</td></tr>
+      <tr><td><code>AADSTS50011</code> redirect URI mismatch</td><td>The redirect URI in Entra must match <em>exactly</em>, including <code>/auth-redirect.html</code> and lowercase letters. Copy it from step 4, or from the app's Outlook → One-time setup box.</td></tr>
+      <tr><td><code>AADSTS50194</code> not configured as multi-tenant</td><td>Set <code>authority</code> in <code>config.js</code> to <code>https://login.microsoftonline.com/cef-eg.org</code> (step 6).</td></tr>
+      <tr><td><code>AADSTS9002326</code> cross-origin token redemption</td><td>The redirect URI was added under "Web". Remove it and add it again under <strong>Single-page application</strong>.</td></tr>
+      <tr><td>"Need admin approval"</td><td>Your organisation blocks user consent. An admin opens the app registration → API permissions → <strong>Grant admin consent</strong>.</td></tr>
+      <tr><td>"Setup needed" even though you edited config.js</td><td>The browser cached the old file. Press Ctrl+F5, or wait a minute for GitHub Pages to redeploy.</td></tr>
+      <tr><td>Email fails with 403</td><td><code>Mail.Send</code> is missing or wasn't consented. Add it (step 5), then sign out and connect again in Sunbeam.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>📦 Bring your old plans across</h2>
+    <ol style="margin-bottom:0">
+      <li>Open your <em>old</em> <code>sunbeam.html</code> from Downloads, click <strong>🚀 Backup &amp; Launch</strong>, then <strong>Download Full .JSON Backup</strong>.</li>
+      <li>On your new GitHub Pages site, open <strong>💾 Data → Restore backup…</strong> and pick that file.</li>
+      <li>Then, in the Outlook tab, click <strong>Push unsynced plans</strong> to put them on your calendar.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const user = $('user'), repo = $('repo');
+  try {
+    user.value = localStorage.getItem('sg-user') || '';
+    repo.value = localStorage.getItem('sg-repo') || repo.value;
+  } catch (e) {}
+
+  function update() {
+    const u = (user.value.trim() || '<your-username>');
+    const r = (repo.value.trim() || 'sunbeam-planner');
+    const site = `https://${u.toLowerCase()}.github.io/${r}/`;
+    $('site-url').textContent = site;
+    $('redirect-uri').textContent = site + 'auth-redirect.html';
+    $('git-cmds').textContent =
+`E:
+cd \\Sunbeam
+git remote add origin https://github.com/${u}/${r}.git
+git push -u origin main`;
+    $('config-snippet').textContent =
+`window.SUNBEAM_CONFIG = {
+  clientId: 'PASTE-YOUR-APPLICATION-CLIENT-ID-HERE',
+  authority: 'https://login.microsoftonline.com/cef-eg.org'
+};`;
+    document.querySelectorAll('.v-repo').forEach(n => n.textContent = r);
+    try { localStorage.setItem('sg-user', user.value); localStorage.setItem('sg-repo', repo.value); } catch (e) {}
+  }
+  user.addEventListener('input', update);
+  repo.addEventListener('input', update);
+  update();
+
+  document.querySelectorAll('[data-copy]').forEach(btn => btn.addEventListener('click', () => {
+    navigator.clipboard.writeText($(btn.dataset.copy).textContent).then(() => {
+      btn.textContent = 'Copied';
+      setTimeout(() => btn.textContent = 'Copy', 1200);
+    });
+  }));
+
+  document.querySelectorAll('[data-tab]').forEach(tab => tab.addEventListener('click', () => {
+    document.querySelectorAll('[data-tab]').forEach(t => t.setAttribute('aria-selected', t === tab));
+    $('tab-git').classList.toggle('hidden', tab.dataset.tab !== 'git');
+    $('tab-web').classList.toggle('hidden', tab.dataset.tab !== 'web');
+  }));
+</script>
+</body>
+</html>

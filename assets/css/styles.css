@@ -1,0 +1,166 @@
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #FAF6F0;
+  color: #2D2A26;
+}
+.font-serif-human {
+  font-family: 'Fraunces', Georgia, serif;
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+.warm-card {
+  background-color: #FFFFFF;
+  border: 1px solid #EFE8DC;
+  box-shadow: 0 4px 20px -4px rgba(120, 95, 70, 0.06);
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* Keep the focus ring visible for keyboard users on every button */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #F59E0B;
+  outline-offset: 2px;
+}
+
+/* Gentle entrance for newly rendered list items */
+@keyframes sunbeam-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in { animation: sunbeam-rise 0.25s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .rise-in, .progress-ring-circle { animation: none; transition: none; }
+}
+
+/* ========== Cozy Evening / Twilight Theme ========== */
+body.evening-mode {
+  background-color: #1A1715;
+  color: #F3EDE2;
+  color-scheme: dark;
+}
+body.evening-mode header {
+  background-color: rgba(28, 25, 23, 0.95) !important;
+  border-color: #362F2A !important;
+}
+body.evening-mode .warm-card,
+body.evening-mode .bg-white,
+body.evening-mode [class*="bg-white/"],
+body.evening-mode .bg-\[\#FAF8F5\],
+body.evening-mode .bg-\[\#FAF6F0\],
+body.evening-mode .bg-\[\#FFFDF7\],
+body.evening-mode .bg-\[\#F3EDE2\],
+body.evening-mode .bg-stone-50,
+body.evening-mode .bg-stone-100 {
+  background-color: #25211E !important;
+  border-color: #38312C !important;
+}
+body.evening-mode .warm-card {
+  box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.45);
+}
+body.evening-mode #task-list > li,
+body.evening-mode .week-task-card,
+body.evening-mode .month-cell {
+  background-color: #2B2622 !important;
+  border-color: #3D352E !important;
+}
+body.evening-mode .bg-amber-50,
+body.evening-mode [class*="bg-amber-50/"],
+body.evening-mode .bg-amber-100,
+body.evening-mode [class*="bg-amber-100/"] {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+body.evening-mode .bg-sky-50,
+body.evening-mode [class*="bg-sky-50/"],
+body.evening-mode .bg-sky-100 {
+  background-color: rgba(14, 165, 233, 0.14) !important;
+  border-color: rgba(14, 165, 233, 0.3) !important;
+}
+body.evening-mode .bg-emerald-50,
+body.evening-mode [class*="bg-emerald-50/"],
+body.evening-mode .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+body.evening-mode .bg-rose-50,
+body.evening-mode [class*="bg-rose-50/"],
+body.evening-mode .bg-rose-100,
+body.evening-mode [class*="bg-rose-100/"] {
+  background-color: rgba(244, 63, 94, 0.14) !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+body.evening-mode .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.14) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+body.evening-mode .bg-stone-200,
+body.evening-mode .bg-\[\#EFE6D8\] {
+  background-color: #3A332D !important;
+}
+body.evening-mode .text-stone-900,
+body.evening-mode .text-stone-800,
+body.evening-mode .text-stone-700 {
+  color: #F5EFE6 !important;
+}
+body.evening-mode .text-stone-600,
+body.evening-mode .text-stone-500 {
+  color: #C7B9A8 !important;
+}
+body.evening-mode .text-amber-950,
+body.evening-mode .text-amber-900,
+body.evening-mode .text-amber-800 { color: #FCD9A0 !important; }
+body.evening-mode .text-sky-950,
+body.evening-mode .text-sky-900,
+body.evening-mode .text-sky-800 { color: #A5DCF7 !important; }
+body.evening-mode .text-emerald-900,
+body.evening-mode .text-emerald-800 { color: #A7EBCD !important; }
+body.evening-mode .text-rose-950,
+body.evening-mode .text-rose-900 { color: #FBC2CC !important; }
+body.evening-mode .border-stone-100,
+body.evening-mode .border-stone-200,
+body.evening-mode .border-stone-300,
+body.evening-mode [class*="border-[#EF"] {
+  border-color: #3D352E !important;
+}
+body.evening-mode input,
+body.evening-mode select,
+body.evening-mode pre {
+  background-color: #1D1A17 !important;
+  border-color: #3D352E !important;
+  color: #F5EFE6 !important;
+}
+body.evening-mode #hero-banner-section {
+  background: linear-gradient(135deg, #28221D 0%, #1F1B18 55%, #2D2120 100%) !important;
+  border-color: #3D342B !important;
+}
+body.evening-mode .hover-lift:hover { background-color: #332C27 !important; }
+
+/* ========== Scrollbars ========== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D5C7B8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #B8A693; }
+
+/* ========== Print ========== */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  header, #task-form-card, #focus-card, #quick-outlook-card, #toast-container, .no-print {
+    display: none !important;
+  }
+  .warm-card {
+    box-shadow: none !important;
+    border: 1px solid #D6D3D1 !important;
+    break-inside: avoid;
+  }
+}
