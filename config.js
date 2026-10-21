@@ -1,12 +1,11 @@
 // Sunbeam configuration.
 // The client ID is a public identifier (not a secret), so it is safe to commit to GitHub.
-// You can also leave it empty and paste it in the app under Outlook → Setup instead.
+// Both values can also be overridden per-browser in the app under Outlook → One-time setup.
 window.SUNBEAM_CONFIG = {
   // Application (client) ID from your Microsoft Entra app registration.
-  clientId: '',
+  clientId: 'c26ba51e-709e-40fc-bc92-6c52fa5f814f',
 
-  // 'common' lets any work/school or personal Microsoft account sign in.
-  // If your app registration is "this organizational directory only", you MUST replace 'common'
-  // with your tenant ID or domain (e.g. 'cef-eg.org'), or sign-in fails with AADSTS50194.
-  authority: 'https://login.microsoftonline.com/common'
+  // The app is registered as "this organizational directory only", so sign-in must go to
+  // your organisation's endpoint. Using '/common' here fails with AADSTS50194.
+  authority: 'https://login.microsoftonline.com/cef-eg.org'
 };

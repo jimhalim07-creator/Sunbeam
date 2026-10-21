@@ -122,6 +122,7 @@ let userMood = 'steady';
 let dailyIntention = '';
 let outlookEmail = '';
 let msClientIdOverride = '';
+let msTenantOverride = '';
 let autoSyncDefault = true;
 let autoPullOnStart = false;
 let emailScope = 'day';
@@ -202,6 +203,7 @@ function loadSavedState() {
     userMood = localStorage.getItem('sunbeam_user_mood') || 'steady';
     outlookEmail = localStorage.getItem('sunbeam_outlook_email') || '';
     msClientIdOverride = localStorage.getItem('sunbeam_ms_client_id') || '';
+    msTenantOverride = localStorage.getItem('sunbeam_ms_tenant') || '';
     autoSyncDefault = localStorage.getItem('sunbeam_autosync') !== 'false';
     autoPullOnStart = localStorage.getItem('sunbeam_autopull') === 'true';
     emailScope = localStorage.getItem('sunbeam_email_scope') || 'day';
@@ -232,6 +234,7 @@ function saveState() {
     localStorage.setItem('sunbeam_daily_intention', dailyIntention);
     localStorage.setItem('sunbeam_outlook_email', outlookEmail);
     localStorage.setItem('sunbeam_ms_client_id', msClientIdOverride);
+    localStorage.setItem('sunbeam_ms_tenant', msTenantOverride);
     localStorage.setItem('sunbeam_autosync', autoSyncDefault ? 'true' : 'false');
     localStorage.setItem('sunbeam_autopull', autoPullOnStart ? 'true' : 'false');
     localStorage.setItem('sunbeam_email_scope', emailScope);
@@ -245,6 +248,20 @@ function saveState() {
 
 function effectiveClientId() {
   return msClientIdOverride || (window.SUNBEAM_CONFIG && window.SUNBEAM_CONFIG.clientId) || '';
+}
+
+// Apps registered for a single organisation must sign in through that organisation's endpoint, not /common.
+function effectiveAuthority() {
+  if (msTenantOverride) return `https://login.microsoftonline.com/${msTenantOverride}`;
+  return (window.SUNBEAM_CONFIG && window.SUNBEAM_CONFIG.authority) || 'https://login.microsoftonline.com/common';
+}
+
+function effectiveTenant() {
+  return effectiveAuthority().replace(/\/+$/, '').split('/').pop();
+}
+
+function initOutlook() {
+  return Outlook.init(effectiveClientId(), effectiveAuthority());
 }
 
 // ==========================================
@@ -428,6 +445,15 @@ function describeGraphError(err) {
     return 'Your browser blocked the sign-in popup. Allow popups for this site and try again.';
   }
   if (err && err.errorCode === 'user_cancelled') return 'Sign-in was cancelled.';
+  if (err && /AADSTS50194/.test(err.message)) {
+    return 'Your app is registered for your organisation only. Enter your organisation domain (e.g. cef-eg.org) under Outlook → One-time setup, then press Save and connect again.';
+  }
+  if (err && /AADSTS50011/.test(err.message)) {
+    return `The redirect URI isn't registered. In Entra, add ${Outlook.redirectUri()} as a Single-page application redirect URI.`;
+  }
+  if (err && /AADSTS9002326/.test(err.message)) {
+    return 'The redirect URI is registered as "Web". In Entra, move it to the "Single-page application" platform.';
+  }
   if (err && err.status === 403) return 'Microsoft refused the request. Your organisation may need an admin to approve Sunbeam\'s permissions.';
   return (err && err.message) || String(err);
 }
@@ -457,6 +483,10 @@ async function connectOrDisconnectOutlook() {
   } catch (err) {
     appendSyncLog(`Sign-in failed: ${describeGraphError(err)}`, true);
     showToast(describeGraphError(err), '⚠️', 'Outlook');
+    if (/AADSTS50194/.test(err && err.message)) {
+      $('outlook-setup-details').open = true;
+      $('ms-tenant-input').focus();
+    }
   }
 }
 
@@ -1124,6 +1154,8 @@ function renderOutlookView() {
   $('detected-redirect-uri').value = Outlook.redirectUri();
   const clientInput = $('ms-client-id-input');
   if (document.activeElement !== clientInput) clientInput.value = effectiveClientId();
+  const tenantInput = $('ms-tenant-input');
+  if (document.activeElement !== tenantInput) tenantInput.value = effectiveTenant() === 'common' ? '' : effectiveTenant();
 }
 
 function render() {
@@ -1762,10 +1794,19 @@ $('save-client-id-btn').addEventListener('click', async () => {
     showToast('That doesn\'t look like a client ID (it should be a GUID).', '⚠️', 'Setup');
     return;
   }
-  msClientIdOverride = val;
+  const tenant = $('ms-tenant-input').value.trim().replace(/^https?:\/\/login\.microsoftonline\.com\//i, '').replace(/\/.*$/, '');
+  if (tenant && !/^[a-z0-9.-]+$/i.test(tenant)) {
+    showToast('The organisation should be a domain like cef-eg.org, or a tenant ID.', '⚠️', 'Setup');
+    return;
+  }
+  // Only store overrides that differ from config.js, so updating config.js later still takes effect
+  const configId = (window.SUNBEAM_CONFIG && window.SUNBEAM_CONFIG.clientId) || '';
+  msClientIdOverride = val === configId ? '' : val;
+  msTenantOverride = '';
+  msTenantOverride = (tenant || 'common') === effectiveTenant() ? '' : (tenant || 'common');
   saveState();
-  await Outlook.init(effectiveClientId());
-  appendSyncLog(val ? `Saved client ID ${val.slice(0, 8)}…` : 'Cleared client ID override');
+  await initOutlook();
+  appendSyncLog(`Setup saved: client ${val ? val.slice(0, 8) + '…' : '(none)'}, organisation ${effectiveTenant()}`);
   render();
   showToast(val ? 'Saved. Now press Connect Microsoft account.' : 'Client ID cleared.', '🔐', 'Setup');
 });
@@ -1856,7 +1897,7 @@ $('search-all-dates-check').addEventListener('change', e => {
   $('daily-intention-input').value = dailyIntention;
   switchView('day');
 
-  await Outlook.init(effectiveClientId());
+  await initOutlook();
   render();
   if (Outlook.connected) {
     appendSyncLog(`Signed in as ${Outlook.account.username}`);

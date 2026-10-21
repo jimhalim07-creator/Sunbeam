@@ -581,7 +581,7 @@
                 <li>In the <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline font-semibold">Entra admin center → App registrations</a>, choose <strong>New registration</strong>.</li>
                 <li>Under <strong>Redirect URI</strong>, pick <strong>Single-page application (SPA)</strong> and paste the address below.</li>
                 <li>Under <strong>API permissions</strong>, add the Microsoft Graph delegated permissions <code>Calendars.ReadWrite</code> and <code>Mail.Send</code>.</li>
-                <li>Copy the <strong>Application (client) ID</strong> into the box below, or into <code>config.js</code> in your repository.</li>
+                <li>Copy the <strong>Application (client) ID</strong> and your organisation's domain into the boxes below, or into <code>config.js</code> in your repository.</li>
               </ol>
               <div>
                 <span class="block font-bold text-stone-700 mb-1">Redirect URI</span>
@@ -594,8 +594,15 @@
                 <label for="ms-client-id-input" class="block font-bold text-stone-700 mb-1">Application (client) ID</label>
                 <div class="flex gap-2">
                   <input id="ms-client-id-input" type="text" placeholder="00000000-0000-0000-0000-000000000000" spellcheck="false" class="flex-1 min-w-0 px-3 py-1.5 font-mono rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+              </div>
+              <div>
+                <label for="ms-tenant-input" class="block font-bold text-stone-700 mb-1">Organisation <span class="font-normal text-stone-400">(domain or Directory (tenant) ID)</span></label>
+                <div class="flex gap-2">
+                  <input id="ms-tenant-input" type="text" placeholder="e.g. cef-eg.org — leave empty for multi-tenant apps" spellcheck="false" class="flex-1 min-w-0 px-3 py-1.5 font-mono rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
                   <button id="save-client-id-btn" type="button" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg">Save</button>
                 </div>
+                <p class="mt-1 text-[11px] text-stone-500">Required if the app is registered for "this organizational directory only".</p>
               </div>
             </div>
           </details>

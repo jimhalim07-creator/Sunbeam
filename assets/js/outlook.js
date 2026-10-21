@@ -30,7 +30,7 @@ const Outlook = {
     return new URL('auth-redirect.html', location.href).href;
   },
 
-  async init(clientId) {
+  async init(clientId, authority) {
     this.clientId = (clientId || '').trim();
     this.msal = null;
     this.account = null;
@@ -40,7 +40,6 @@ const Outlook = {
       this.initError = 'The Microsoft sign-in library did not load. Check your internet connection.';
       return;
     }
-    const authority = (window.SUNBEAM_CONFIG && window.SUNBEAM_CONFIG.authority) || 'https://login.microsoftonline.com/common';
     try {
       this.msal = new window.msal.PublicClientApplication({
         auth: { clientId: this.clientId, authority, redirectUri: this.redirectUri() },
