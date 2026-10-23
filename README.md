@@ -3,6 +3,7 @@
 A warm day, week and month planner that runs entirely in your browser and links to your **Microsoft Outlook** calendar and email.
 
 - **Day / Week / Month** views, with search, sub-steps, priorities and repeating plans
+- **Quote of the day** at the top, built in (no outside service), changing at midnight Cairo time. It follows special days (New Year, Ramadan, the Eids, Sham el-Nessim, Mother's Day…) and your work week: fresh starts on Sunday, finishing well on Thursday, rest at the weekend. Edit `assets/js/quotes.js` to add your own.
 - **Work week Sunday–Thursday, 9 AM–5 PM Cairo time.** Weeks start on Sunday, Friday and Saturday are shown as the weekend, and work plans outside your hours get a 🌙 marker. All of this is set in `config.js` (`timeZone`, `weekStartsOn`, `workDays`, `workHours`).
 - **Outlook calendar sync**: new plans become calendar events. Checking a plan off adds a ✓ to the event, and deleting the plan removes the event.
 - **Import Outlook meetings** for the next 30 days so you see them next to your plans

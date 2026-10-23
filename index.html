@@ -129,9 +129,12 @@
               <button id="save-name-btn" type="submit" class="px-2.5 py-1 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">Save</button>
             </form>
 
-            <p id="rank-desc" class="text-xs sm:text-sm text-stone-600 max-w-xl leading-relaxed">
-              Take a deep breath. Just pick one small thing that makes today feel lighter.
-            </p>
+            <!-- Quote of the day (assets/js/quotes.js), changes at midnight in the planner's time zone -->
+            <figure id="daily-quote" class="max-w-xl pl-3 border-l-2 border-amber-300">
+              <span id="quote-occasion" class="hidden inline-block mb-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900"></span>
+              <blockquote id="quote-text" class="text-sm sm:text-[15px] text-stone-700 leading-relaxed font-serif-human italic"></blockquote>
+              <figcaption id="quote-author" class="text-[11px] font-semibold text-amber-800 mt-0.5"></figcaption>
+            </figure>
           </div>
         </div>
 
@@ -706,6 +709,7 @@
   <script src="config.js" defer></script>
   <script src="assets/js/sound.js" defer></script>
   <script src="assets/js/outlook.js" defer></script>
+  <script src="assets/js/quotes.js" defer></script>
   <script src="assets/js/app.js" defer></script>
 </body>
 </html>

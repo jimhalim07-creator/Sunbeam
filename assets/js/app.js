@@ -856,7 +856,21 @@ function updateDashboard() {
   }
   $('rank-emoji').textContent = currentRank.emoji;
   $('rank-text').textContent = currentRank.title;
-  $('rank-desc').textContent = currentRank.desc;
+  // The progress message moves to the badge tooltip; the banner shows the quote of the day instead
+  $('rank-badge').title = currentRank.desc;
+  renderDailyQuote();
+}
+
+function renderDailyQuote() {
+  const today = todayYMD();
+  const figure = $('daily-quote');
+  if (figure.dataset.date === today || typeof getQuoteOfTheDay !== 'function') return;
+  const q = getQuoteOfTheDay(today, WORK_DAYS);
+  figure.dataset.date = today;
+  $('quote-text').textContent = `“${q.text}”`;
+  $('quote-author').textContent = `— ${q.author}`;
+  $('quote-occasion').textContent = q.occasion || '';
+  $('quote-occasion').classList.toggle('hidden', !q.occasion);
 }
 
 function tag(text, classes) {
