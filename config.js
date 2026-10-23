@@ -7,5 +7,14 @@ window.SUNBEAM_CONFIG = {
 
   // The app is registered as "this organizational directory only", so sign-in must go to
   // your organisation's endpoint. Using '/common' here fails with AADSTS50194.
-  authority: 'https://login.microsoftonline.com/cef-eg.org'
+  authority: 'https://login.microsoftonline.com/cef-eg.org',
+
+  // All plan times are read in this time zone, whatever your computer's clock is set to.
+  // Uses the IANA name, so Egypt's daylight-saving changes are handled automatically.
+  timeZone: 'Africa/Cairo',
+
+  // Days of the week: 0 = Sunday, 1 = Monday … 6 = Saturday
+  weekStartsOn: 0,
+  workDays: [0, 1, 2, 3, 4], // Sunday to Thursday
+  workHours: { start: '09:00', end: '17:00' }
 };

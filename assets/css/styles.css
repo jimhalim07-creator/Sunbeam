@@ -40,6 +40,17 @@ summary:focus-visible {
   .rise-in, .progress-ring-circle { animation: none; transition: none; }
 }
 
+/* ========== Work week ========== */
+/* Work days full width, weekend days narrower (set from JS in renderWeekView) */
+@media (min-width: 1024px) {
+  #week-columns-grid { grid-template-columns: var(--week-cols, repeat(7, minmax(0, 1fr))); }
+}
+.weekend-col { background-color: #F7F2EA; box-shadow: none; }
+.weekend-col .week-task-card { opacity: 0.85; }
+body.evening-mode .warm-card.weekend-col,
+body.evening-mode .month-cell.weekend-cell { background-color: #201C19 !important; }
+body.evening-mode .text-indigo-700 { color: #C7D2FE !important; }
+
 /* ========== Cozy Evening / Twilight Theme ========== */
 body.evening-mode {
   background-color: #1A1715;

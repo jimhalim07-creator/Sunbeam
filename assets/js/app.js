@@ -19,15 +19,90 @@ function addDays(ymd, days) {
   return formatYMD(d);
 }
 
+// ---------- Planner time zone & work week ----------
+// Every plan's date and time is a wall-clock time in PLANNER_TZ (Cairo by default), so the
+// planner behaves the same even if the computer's own clock is set to another zone.
+const CFG = window.SUNBEAM_CONFIG || {};
+const PLANNER_TZ = (() => {
+  try {
+    const tz = CFG.timeZone || 'Africa/Cairo';
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return tz;
+  } catch (e) {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+})();
+const WEEK_STARTS_ON = Number.isInteger(CFG.weekStartsOn) ? CFG.weekStartsOn : 0;
+const WORK_DAYS = Array.isArray(CFG.workDays) ? CFG.workDays : [0, 1, 2, 3, 4];
+const WORK_HOURS = { start: (CFG.workHours && CFG.workHours.start) || '09:00', end: (CFG.workHours && CFG.workHours.end) || '17:00' };
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const zoneFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: PLANNER_TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+});
+
+// Wall-clock parts of an instant in the planner zone
+function zonedParts(date) {
+  const p = Object.fromEntries(zoneFormatter.formatToParts(date).map(x => [x.type, x.value]));
+  return { ymd: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour}:${p.minute}`, hour: Number(p.hour) };
+}
+
+// The instant at which the planner zone's clock shows ymd + hm (DST-safe: corrects the guess twice)
+function zonedToDate(ymd, hm) {
+  const [y, mo, d] = ymd.split('-').map(Number);
+  const [h, mi] = (hm || '00:00').split(':').map(Number);
+  const target = Date.UTC(y, mo - 1, d, h || 0, mi || 0);
+  let guess = target;
+  for (let i = 0; i < 2; i++) {
+    const p = zonedParts(new Date(guess));
+    const [py, pm, pd] = p.ymd.split('-').map(Number);
+    const [ph, pmi] = p.hm.split(':').map(Number);
+    guess += target - Date.UTC(py, pm - 1, pd, ph, pmi);
+  }
+  return new Date(guess);
+}
+
 function todayYMD() {
-  return formatYMD(new Date());
+  return zonedParts(new Date()).ymd;
 }
 
 function taskStartDate(task) {
-  const d = parseYMD(task.date);
-  const [h, m] = (task.time || '09:00').split(':').map(Number);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return d;
+  return zonedToDate(task.date, task.time || '09:00');
+}
+
+function monthOf(ymd) {
+  const [year, month] = ymd.split('-').map(Number);
+  return { year, month: month - 1 };
+}
+
+function weekdayOf(ymd) {
+  return parseYMD(ymd).getDay();
+}
+
+function isWorkDay(ymd) {
+  return WORK_DAYS.includes(weekdayOf(ymd));
+}
+
+function workHoursLabel() {
+  const days = WORK_DAYS.length ? `${DAY_SHORT[WORK_DAYS[0]]}–${DAY_SHORT[WORK_DAYS[WORK_DAYS.length - 1]]}` : '';
+  return `${days}, ${shortTime(WORK_HOURS.start)}–${shortTime(WORK_HOURS.end)}`;
+}
+
+// "9 AM" instead of "9:00 AM" when on the hour
+function shortTime(hm) {
+  return formatTime12(hm).replace(':00', '');
+}
+
+// Why a time falls outside working hours, or '' if it's inside them. All-day plans count as inside.
+function outsideWorkReason(date, time, duration = 60) {
+  if (!date) return '';
+  if (!isWorkDay(date)) return `${DAY_SHORT[weekdayOf(date)]} is a weekend day`;
+  if (!time) return '';
+  const toMin = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+  const start = toMin(time);
+  if (start < toMin(WORK_HOURS.start)) return 'starts before working hours';
+  if (start + Number(duration || 0) > toMin(WORK_HOURS.end)) return 'runs past working hours';
+  return '';
 }
 
 function escapeHtml(str) {
@@ -53,9 +128,8 @@ function el(tag, className, text) {
 function formatTime12(time) {
   if (!time) return 'All day';
   const [h, m] = time.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // Format the wall-clock time itself; a fixed UTC date avoids daylight-saving gaps
+  return new Date(Date.UTC(2000, 0, 1, h, m)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC' });
 }
 
 function relativeFromNow(date) {
@@ -114,7 +188,7 @@ let currentFilter = 'all';
 let selectedPriority = 'medium';
 let selectedDate = todayYMD();
 let currentWeekOffset = 0;
-let currentMonthYear = { year: new Date().getFullYear(), month: new Date().getMonth() };
+let currentMonthYear = monthOf(todayYMD());
 let lastKnownToday = todayYMD();
 
 let userName = 'friend';
@@ -185,6 +259,29 @@ function parseEmails(text) {
 
 function invalidEmails(text) {
   return String(text || '').split(/[,;]+/).map(s => s.trim()).filter(s => s && !EMAIL_RE.test(s.replace(/^.*</, '').replace(/>.*$/, '').trim()));
+}
+
+// Only flag work plans and meetings; a personal plan in the evening is perfectly normal
+function workOutsideHours(task) {
+  const workish = task.category === 'Work' || task.source === 'outlook' || task.attendees.length > 0;
+  return workish ? outsideWorkReason(task.date, task.time, task.duration) : '';
+}
+
+function setHoursHint(hintEl, { date, time, duration, category, guests, source }) {
+  const reason = workOutsideHours({ date, time, duration, category, attendees: guests, source });
+  hintEl.textContent = reason ? `🌙 Outside working hours (${workHoursLabel()}): ${reason}.` : '';
+  hintEl.classList.toggle('hidden', !reason);
+}
+
+function updateFormHoursHint() {
+  setHoursHint($('task-hours-hint'), {
+    date: taskDateInput.value,
+    time: taskTimeInput.value,
+    duration: Number(taskDurationSelect.value),
+    category: taskCategorySelect.value,
+    guests: parseEmails($('task-invitees-input').value),
+    source: 'sunbeam'
+  });
 }
 
 function canEdit(task) {
@@ -372,7 +469,7 @@ function appendSyncLog(msg, isError = false) {
     logBox.innerHTML = '';
     logBox.dataset.empty = 'false';
   }
-  const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const nowStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: PLANNER_TZ });
   const line = el('div', isError ? 'text-rose-600' : '', `[${nowStr}] ${msg}`);
   logBox.prepend(line);
 }
@@ -571,10 +668,10 @@ function needsPush(t) {
 async function pullOutlookEvents({ quiet = false } = {}) {
   if (!Outlook.connected) return;
   await withOutlookBusy(async () => {
-    const start = parseYMD(todayYMD());
-    start.setDate(start.getDate() - 1);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 31);
+    const startYmd = addDays(todayYMD(), -1);
+    const endYmd = addDays(startYmd, 31);
+    const start = zonedToDate(startYmd, '00:00');
+    const end = zonedToDate(endYmd, '00:00');
 
     try {
       const events = await Outlook.listEvents(start, end);
@@ -592,8 +689,8 @@ async function pullOutlookEvents({ quiet = false } = {}) {
         const endDt = fromGraphUtc(ev.end.dateTime);
         const fields = {
           text: ev.subject || '(No title)',
-          date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : formatYMD(startDt),
-          time: ev.isAllDay ? '' : `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`,
+          date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : zonedParts(startDt).ymd,
+          time: ev.isAllDay ? '' : zonedParts(startDt).hm,
           duration: Math.max(15, Math.round((endDt - startDt) / 60000)),
           webLink: ev.webLink || null,
           isOrganizer: !!ev.isOrganizer,
@@ -621,8 +718,6 @@ async function pullOutlookEvents({ quiet = false } = {}) {
       });
 
       // Meetings removed from Outlook disappear here too (unless you already checked them off)
-      const startYmd = formatYMD(start);
-      const endYmd = formatYMD(end);
       const before = tasks.length;
       tasks = tasks.filter(t => !(t.source === 'outlook' && !t.completed && t.date >= startYmd && t.date < endYmd && !seen.has(t.outlookEventId)));
       const removed = before - tasks.length;
@@ -725,13 +820,13 @@ function openOutlookWebCompose() {
 // 7. RENDERING
 // ==========================================
 function updateDashboard() {
-  const hr = new Date().getHours();
+  const hr = zonedParts(new Date()).hour;
   let greeting = 'Good morning';
   let icon = '☀️';
   if (hr >= 12 && hr < 17) { greeting = 'Good afternoon'; icon = '🌤️'; }
   else if (hr >= 17 || hr < 4) { greeting = 'Good evening'; icon = '🌙'; }
   $('view-greeting').textContent = `${greeting}, ${userName} ${icon}`;
-  $('header-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  $('header-date').textContent = parseYMD(todayYMD()).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ` · ${PLANNER_TZ.split('/').pop().replace(/_/g, ' ')} time`;
 
   const today = todayYMD();
   const todays = tasks.filter(t => t.date === today);
@@ -930,13 +1025,16 @@ function renderDayView() {
 function getWeekDaysArray(offsetWeeks = 0) {
   const anchor = parseYMD(todayYMD());
   anchor.setDate(anchor.getDate() + offsetWeeks * 7);
-  const diffToMonday = (anchor.getDay() + 6) % 7;
-  anchor.setDate(anchor.getDate() - diffToMonday);
-  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return names.map((name, i) => {
+  anchor.setDate(anchor.getDate() - ((anchor.getDay() - WEEK_STARTS_ON + 7) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(anchor);
     d.setDate(anchor.getDate() + i);
-    return { name, date: formatYMD(d), label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+    return {
+      name: DAY_SHORT[d.getDay()],
+      date: formatYMD(d),
+      label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      isWork: WORK_DAYS.includes(d.getDay())
+    };
   });
 }
 
@@ -945,16 +1043,23 @@ function renderWeekView() {
   grid.innerHTML = '';
   const weekDays = getWeekDaysArray(currentWeekOffset);
   const today = todayYMD();
-  $('week-range-subtitle').textContent = `${weekDays[0].label} – ${weekDays[6].label}`;
+  $('week-range-subtitle').textContent = `${weekDays[0].label} – ${weekDays[6].label} · Work week ${workHoursLabel()}`;
+  // On wide screens weekend columns are narrower than work days (see #week-columns-grid in styles.css)
+  // (only while they're empty, so weekend plans never get squeezed)
+  grid.style.setProperty('--week-cols', weekDays
+    .map(d => d.isWork || tasks.some(t => t.date === d.date) ? 'minmax(0, 1fr)' : 'minmax(0, 0.72fr)').join(' '));
 
   weekDays.forEach(day => {
     const isToday = day.date === today;
-    const col = el('div', `warm-card rounded-2xl p-3 flex flex-col min-h-[200px] lg:min-h-[360px] ${isToday ? 'ring-2 ring-amber-400' : ''}`);
+    const col = el('div', `warm-card rounded-2xl p-3 flex flex-col min-h-[200px] lg:min-h-[360px] ${isToday ? 'ring-2 ring-amber-400' : ''} ${day.isWork ? '' : 'weekend-col'}`);
 
     const header = el('div', 'border-b border-stone-100 pb-2 mb-2 flex items-center justify-between gap-1');
     const titleDiv = el('div', 'min-w-0');
     titleDiv.appendChild(el('span', `block text-xs font-bold ${isToday ? 'text-amber-700' : 'text-stone-800'}`, isToday ? `${day.name} · Today` : day.name));
     titleDiv.appendChild(el('span', 'block text-[11px] text-stone-400 font-medium', day.label));
+    titleDiv.appendChild(day.isWork
+      ? el('span', 'block text-[10px] text-stone-400 whitespace-nowrap', `${shortTime(WORK_HOURS.start)}–${shortTime(WORK_HOURS.end)}`)
+      : el('span', 'inline-block mt-0.5 text-[10px] font-bold px-1.5 rounded-full bg-stone-100 text-stone-500', 'Weekend'));
 
     const addBtn = el('button', 'w-7 h-7 shrink-0 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 text-sm font-bold transition-colors', '+');
     addBtn.type = 'button';
@@ -993,10 +1098,16 @@ function renderWeekView() {
       });
 
       const top = el('div', 'flex items-center justify-between gap-1 mb-0.5');
-      const time = el('span', 'flex items-center gap-1 text-[10px] font-bold text-stone-500 tabular-nums');
+      const time = el('span', 'flex items-center gap-1 text-[10px] font-bold text-stone-500 tabular-nums whitespace-nowrap min-w-0');
       time.appendChild(el('span', `w-1.5 h-1.5 rounded-full ${PRIORITIES[task.priority].dot}`));
       time.appendChild(document.createTextNode(formatTime12(task.time)));
       if (task.attendees.length) time.appendChild(el('span', 'text-sky-700', `· 👥${task.attendees.length}`));
+      const offHours = workOutsideHours(task);
+      if (offHours) {
+        const moon = el('span', 'text-indigo-500', '🌙');
+        moon.title = `Outside working hours: ${offHours}`;
+        time.appendChild(moon);
+      }
       top.appendChild(time);
       const right = el('span', 'flex items-center gap-1');
       if (canEdit(task)) {
@@ -1028,7 +1139,12 @@ function renderMonthView() {
   grid.innerHTML = '';
   const { year, month } = currentMonthYear;
   const first = new Date(year, month, 1);
-  const startOffset = (first.getDay() + 6) % 7; // Monday-first
+  const startOffset = (first.getDay() - WEEK_STARTS_ON + 7) % 7;
+  $('month-weekday-row').innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const wd = (WEEK_STARTS_ON + i) % 7;
+    $('month-weekday-row').appendChild(el('div', WORK_DAYS.includes(wd) ? '' : 'text-stone-300', DAY_SHORT[wd]));
+  }
   const totalDays = new Date(year, month + 1, 0).getDate();
   const today = todayYMD();
   $('month-title-heading').textContent = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1045,7 +1161,7 @@ function renderMonthView() {
     const doneCount = dayTasks.filter(t => t.completed).length;
     const allDone = dayTasks.length > 0 && doneCount === dayTasks.length;
 
-    const cell = el('button', `${cellBase} text-left bg-white transition-colors ${
+    const cell = el('button', `${cellBase} text-left transition-colors ${isWorkDay(dateStr) ? 'bg-white' : 'bg-[#F7F2EA] weekend-cell'} ${
       isToday ? 'border-amber-500 ring-2 ring-amber-200' : 'border-[#EFE8DC] hover:border-amber-300 hover:bg-amber-50/30'
     }`);
     cell.type = 'button';
@@ -1195,7 +1311,7 @@ function renderRemindersView() {
     left.appendChild(el('div', `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${soon ? 'bg-amber-100' : 'bg-stone-100'}`, '🔔'));
     const details = el('div', 'min-w-0 flex-1');
     details.appendChild(el('p', 'text-sm font-bold text-stone-800 break-words', task.text));
-    details.appendChild(el('p', 'text-xs text-stone-500 mt-0.5', `${start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${formatTime12(task.time)} · ${relativeFromNow(start)}`));
+    details.appendChild(el('p', 'text-xs text-stone-500 mt-0.5', `${parseYMD(task.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${formatTime12(task.time)} · ${relativeFromNow(start)}`));
     left.appendChild(details);
 
     const btns = el('div', 'flex items-center gap-2');
@@ -1232,6 +1348,7 @@ function renderOutlookView() {
 function render() {
   updateDashboard();
   refreshOutlookUI();
+  updateFormHoursHint();
   ({ day: renderDayView, week: renderWeekView, month: renderMonthView, analysis: renderAnalysisView, reminders: renderRemindersView, outlook: renderOutlookView })[activeView]();
   saveState();
 }
@@ -1281,7 +1398,7 @@ async function addTask() {
     id: uid(),
     text,
     date,
-    time: taskTimeInput.value || '10:00',
+    time: taskTimeInput.value || WORK_HOURS.start,
     duration: Number(taskDurationSelect.value),
     category: taskCategorySelect.value,
     priority: selectedPriority,
@@ -1417,8 +1534,8 @@ function snoozeTask(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
   const next = new Date(Math.max(taskStartDate(task).getTime(), Date.now()) + 15 * 60000);
-  task.date = formatYMD(next);
-  task.time = `${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`;
+  task.date = zonedParts(next).ymd;
+  task.time = zonedParts(next).hm;
   sounds.playAdd();
   showToast(`Snoozed to ${formatTime12(task.time)}`, '⏰', 'Reminder');
   render();
@@ -1441,6 +1558,14 @@ function updateEditDialogHints() {
   const allDay = $('edit-allday').checked;
   $('edit-time').disabled = allDay;
   $('edit-duration').disabled = allDay;
+  setHoursHint($('edit-hours-hint'), {
+    date: $('edit-date').value,
+    time: allDay ? '' : $('edit-time').value,
+    duration: Number($('edit-duration').value),
+    category: task.source === 'outlook' ? task.category : $('edit-category').value,
+    guests: parseEmails($('edit-invitees').value),
+    source: task.source
+  });
 
   const guests = parseEmails($('edit-invitees').value);
   const added = guests.filter(g => !task.attendees.includes(g));
@@ -1897,7 +2022,8 @@ $('edit-dialog').addEventListener('close', () => { editingTaskId = null; });
 $('edit-dialog').addEventListener('click', e => {
   if (e.target === $('edit-dialog')) closeEditDialog();
 });
-['edit-invitees', 'edit-allday'].forEach(id => $(id).addEventListener('input', updateEditDialogHints));
+['edit-invitees', 'edit-allday', 'edit-date', 'edit-time', 'edit-duration', 'edit-category'].forEach(id => $(id).addEventListener('input', updateEditDialogHints));
+[taskDateInput, taskTimeInput, taskDurationSelect, taskCategorySelect, $('task-invitees-input')].forEach(input => input.addEventListener('input', updateFormHoursHint));
 
 taskAutosyncCheck.addEventListener('change', () => {
   autoSyncDefault = taskAutosyncCheck.checked;
@@ -1947,7 +2073,7 @@ function shiftMonth(delta) {
 $('month-prev-btn').addEventListener('click', () => shiftMonth(-1));
 $('month-next-btn').addEventListener('click', () => shiftMonth(1));
 $('month-today-btn').addEventListener('click', () => {
-  currentMonthYear = { year: new Date().getFullYear(), month: new Date().getMonth() };
+  currentMonthYear = monthOf(todayYMD());
   renderMonthView();
 });
 
