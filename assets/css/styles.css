@@ -132,6 +132,7 @@ body.evening-mode [class*="border-[#EF"] {
 }
 body.evening-mode input,
 body.evening-mode select,
+body.evening-mode textarea,
 body.evening-mode pre {
   background-color: #1D1A17 !important;
   border-color: #3D352E !important;

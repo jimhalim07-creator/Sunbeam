@@ -162,8 +162,33 @@ function normalizeTask(t) {
     source: t.source === 'outlook' ? 'outlook' : 'sunbeam',
     outlookEventId: t.outlookEventId || null,
     webLink: t.webLink || null,
-    seriesId: t.seriesId || null
+    seriesId: t.seriesId || null,
+    attendees: parseEmails(Array.isArray(t.attendees) ? t.attendees.join(',') : ''),
+    // Plans made in Sunbeam are always yours; imported meetings are only editable if you organised them
+    isOrganizer: t.source === 'outlook' ? !!t.isOrganizer : true,
+    // Edits made while signed out, waiting to be sent to Outlook
+    needsSync: !!t.needsSync,
+    needsAttendeeSync: !!t.needsAttendeeSync
   };
+}
+
+const EMAIL_RE = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/;
+
+// Accepts "a@x.com, b@y.com; Name <c@z.com>" and returns unique lowercase addresses
+function parseEmails(text) {
+  const found = String(text || '')
+    .split(/[,;\s]+/)
+    .map(s => s.replace(/^.*</, '').replace(/>.*$/, '').trim().toLowerCase())
+    .filter(s => EMAIL_RE.test(s));
+  return [...new Set(found)];
+}
+
+function invalidEmails(text) {
+  return String(text || '').split(/[,;]+/).map(s => s.trim()).filter(s => s && !EMAIL_RE.test(s.replace(/^.*</, '').replace(/>.*$/, '').trim()));
+}
+
+function canEdit(task) {
+  return task.source === 'sunbeam' || task.isOrganizer;
 }
 
 function seedTasks() {
@@ -395,7 +420,7 @@ function refreshOutlookUI() {
   $('ms-graph-pull-btn').disabled = !connected || outlookBusy;
   $('graph-send-email-btn').disabled = !connected || outlookBusy;
 
-  const unsynced = tasks.filter(t => t.source === 'sunbeam' && !t.outlookEventId && !t.completed).length;
+  const unsynced = tasks.filter(needsPush).length;
   $('sync-now-desc').textContent = unsynced
     ? `${unsynced} open ${unsynced === 1 ? 'plan isn\'t' : 'plans aren\'t'} on your calendar yet`
     : 'Everything open is already on your calendar';
@@ -490,17 +515,22 @@ async function connectOrDisconnectOutlook() {
   }
 }
 
-async function pushTaskToOutlook(task, { quiet = false } = {}) {
-  if (!Outlook.connected || task.source !== 'sunbeam') return false;
+async function pushTaskToOutlook(task, { quiet = false, attendeesChanged = false } = {}) {
+  if (!Outlook.connected) return false;
+  // Imported meetings can only be changed (never created) and only if you organised them
+  if (task.source === 'outlook' && (!task.isOrganizer || !task.outlookEventId)) return false;
   try {
     if (task.outlookEventId) {
-      await Outlook.updateEvent(task);
+      await Outlook.updateEvent(task, { attendeesChanged: attendeesChanged || task.needsAttendeeSync });
+      if (task.needsSync) appendSyncLog(`Updated "${task.text}" in Outlook`);
     } else {
       const ev = await Outlook.createEvent(task);
       task.outlookEventId = ev.id;
       task.webLink = ev.webLink;
-      appendSyncLog(`Added "${task.text}" to Outlook (${task.date} ${task.time || ''})`);
+      appendSyncLog(`Added "${task.text}" to Outlook (${task.date} ${task.time || ''})${task.attendees.length ? ` and invited ${task.attendees.join(', ')}` : ''}`);
     }
+    task.needsSync = false;
+    task.needsAttendeeSync = false;
     saveState();
     if (!quiet) render();
     return true;
@@ -517,7 +547,7 @@ async function pushTaskToOutlook(task, { quiet = false } = {}) {
 }
 
 async function pushUnsyncedTasks() {
-  const pending = tasks.filter(t => t.source === 'sunbeam' && !t.outlookEventId && !t.completed);
+  const pending = tasks.filter(needsPush);
   if (pending.length === 0) {
     showToast('Everything open is already on your calendar.', '☁️', 'Outlook');
     return;
@@ -529,8 +559,13 @@ async function pushUnsyncedTasks() {
     }
     render();
     sounds.playComplete();
-    showToast(`Added ${ok} of ${pending.length} plans to your Outlook calendar.`, '🔄', 'Outlook');
+    showToast(`Synced ${ok} of ${pending.length} plans with your Outlook calendar.`, '🔄', 'Outlook');
   });
+}
+
+// Open plans not on the calendar yet, plus any edits made while signed out
+function needsPush(t) {
+  return t.needsSync || (t.source === 'sunbeam' && !t.outlookEventId && !t.completed);
 }
 
 async function pullOutlookEvents({ quiet = false } = {}) {
@@ -560,11 +595,15 @@ async function pullOutlookEvents({ quiet = false } = {}) {
           date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : formatYMD(startDt),
           time: ev.isAllDay ? '' : `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`,
           duration: Math.max(15, Math.round((endDt - startDt) / 60000)),
-          webLink: ev.webLink || null
+          webLink: ev.webLink || null,
+          isOrganizer: !!ev.isOrganizer,
+          attendees: (ev.attendees || []).map(a => (a.emailAddress && a.emailAddress.address || '').toLowerCase()).filter(Boolean)
         };
 
         const existing = tasks.find(t => t.source === 'outlook' && t.outlookEventId === ev.id);
-        if (existing) {
+        if (existing && existing.needsSync) {
+          // Don't overwrite an edit you made while signed out; it gets pushed instead
+        } else if (existing) {
           if (existing.text !== fields.text || existing.date !== fields.date || existing.time !== fields.time) updated++;
           Object.assign(existing, fields);
         } else {
@@ -796,6 +835,12 @@ function renderDayView() {
       meta.appendChild(tag(PRIORITIES[task.priority].label, PRIORITIES[task.priority].tag));
       if (task.outlookEventId) meta.appendChild(tag('☁️ On calendar', 'bg-sky-50 text-sky-800 border-sky-200'));
     }
+    if (task.attendees.length) {
+      const guests = tag(`👥 ${task.attendees.length}`, 'bg-sky-50 text-sky-800 border-sky-200');
+      guests.title = task.attendees.join(', ');
+      meta.appendChild(guests);
+    }
+    if (task.needsSync) meta.appendChild(tag('⏳ Edit not in Outlook yet', 'bg-amber-50 text-amber-800 border-amber-200'));
     if (task.reminder) meta.appendChild(tag('🔔', 'bg-purple-50 text-purple-700 border-purple-200'));
     if (task.seriesId) meta.appendChild(tag('🔁', 'bg-stone-100 text-stone-600 border-stone-200'));
     if (task.subtasks.length) {
@@ -870,6 +915,9 @@ function renderDayView() {
         }
       }));
     }
+    if (canEdit(task)) {
+      actions.appendChild(iconButton('✎', 'Edit time, details and guests', 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:text-amber-900', () => openEditDialog(task.id)));
+    }
     actions.appendChild(iconButton('✕', 'Delete plan', 'bg-white text-stone-400 border-stone-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200', () => deleteTask(task.id)));
 
     li.appendChild(checkBtn);
@@ -929,19 +977,41 @@ function renderWeekView() {
       list.appendChild(el('div', 'text-center py-6 text-[11px] text-stone-300 italic', 'Open day'));
     }
     dayTasks.forEach(task => {
-      const card = el('button', `week-task-card w-full text-left p-2 rounded-xl border text-xs transition-colors ${
+      // A div (not a button) so the ✎ edit button can sit inside it
+      const card = el('div', `week-task-card w-full text-left p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
         task.completed ? 'bg-stone-50 border-stone-200 opacity-60' : 'bg-[#FAF8F5] hover:border-amber-300 border-[#EFE8DC]'
       } ${task.source === 'outlook' ? 'border-l-4 border-l-sky-400' : ''}`);
-      card.type = 'button';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
       card.title = task.completed ? 'Mark as not done' : 'Mark as done';
       card.addEventListener('click', () => toggleTask(task.id));
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleTask(task.id);
+        }
+      });
 
       const top = el('div', 'flex items-center justify-between gap-1 mb-0.5');
       const time = el('span', 'flex items-center gap-1 text-[10px] font-bold text-stone-500 tabular-nums');
       time.appendChild(el('span', `w-1.5 h-1.5 rounded-full ${PRIORITIES[task.priority].dot}`));
       time.appendChild(document.createTextNode(formatTime12(task.time)));
+      if (task.attendees.length) time.appendChild(el('span', 'text-sky-700', `· 👥${task.attendees.length}`));
       top.appendChild(time);
-      top.appendChild(el('span', `text-[10px] font-bold ${task.completed ? 'text-emerald-600' : 'text-stone-300'}`, task.completed ? '✓' : '○'));
+      const right = el('span', 'flex items-center gap-1');
+      if (canEdit(task)) {
+        const edit = el('button', 'w-5 h-5 rounded text-[11px] text-stone-400 hover:text-amber-800 hover:bg-amber-100', '✎');
+        edit.type = 'button';
+        edit.title = 'Edit';
+        edit.setAttribute('aria-label', `Edit ${task.text}`);
+        edit.addEventListener('click', e => {
+          e.stopPropagation();
+          openEditDialog(task.id);
+        });
+        right.appendChild(edit);
+      }
+      right.appendChild(el('span', `text-[10px] font-bold ${task.completed ? 'text-emerald-600' : 'text-stone-300'}`, task.completed ? '✓' : '○'));
+      top.appendChild(right);
 
       card.appendChild(top);
       card.appendChild(el('p', `font-medium line-clamp-2 break-words ${task.completed ? 'line-through text-stone-400' : 'text-stone-800'}`, task.text));
@@ -1135,7 +1205,8 @@ function renderRemindersView() {
     const done = el('button', 'h-8 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors', 'Check off');
     done.type = 'button';
     done.addEventListener('click', () => toggleTask(task.id));
-    btns.appendChild(snooze);
+    // Snoozing moves the event, so it's only offered for your own plans without guests
+    if (task.source === 'sunbeam' && !task.attendees.length) btns.appendChild(snooze);
     btns.appendChild(done);
 
     li.appendChild(left);
@@ -1205,6 +1276,7 @@ async function addTask() {
 
   const seriesId = recur !== 'none' ? uid() : null;
   const subtasks = parseSubtasksInput();
+  const attendees = parseEmails($('task-invitees-input').value);
   const created = dates.map(date => normalizeTask({
     id: uid(),
     text,
@@ -1215,7 +1287,8 @@ async function addTask() {
     priority: selectedPriority,
     reminder: taskReminderCheck.checked,
     subtasks: subtasks.map(st => ({ ...st, id: uid() })),
-    seriesId
+    seriesId,
+    attendees
   }));
   tasks.push(...created);
 
@@ -1225,15 +1298,19 @@ async function addTask() {
   render();
 
   const when = parseYMD(baseDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  if (taskAutosyncCheck.checked && Outlook.connected) {
+  const invites = attendees.length ? ` and invited ${attendees.length} ${attendees.length === 1 ? 'person' : 'people'}` : '';
+  // Invitations are sent by Outlook, so a plan with guests always goes on the calendar
+  if ((taskAutosyncCheck.checked || attendees.length) && Outlook.connected) {
     let ok = 0;
     for (const t of created) {
       if (await pushTaskToOutlook(t, { quiet: true })) ok++;
     }
     render();
     showToast(ok === created.length
-      ? `Added for ${when} and put on your Outlook calendar.`
+      ? `Added for ${when}, put on your Outlook calendar${invites}.`
       : `Added for ${when}. ${created.length - ok} couldn't reach Outlook — see the Outlook tab.`, ok === created.length ? '☁️' : '⚠️', 'Plan added');
+  } else if (attendees.length) {
+    showToast(`Added for ${when}. Invitations go out once you connect Outlook and press "Push unsynced plans".`, '✉️', 'Plan added');
   } else if (taskAutosyncCheck.checked) {
     showToast(`Added for ${when}. Connect Outlook to put it on your calendar.`, '🌻', 'Plan added');
   } else {
@@ -1256,8 +1333,9 @@ function toggleTask(id) {
   }
 
   render();
-  // Mirror the ✓ onto the Outlook event title (only for events Sunbeam created)
-  if (task.outlookEventId && task.source === 'sunbeam') pushTaskToOutlook(task, { quiet: true });
+  // Mirror the ✓ onto the Outlook event title (only for events Sunbeam created, and never for
+  // meetings with guests, who would otherwise get an update email every time you tick it)
+  if (task.outlookEventId && task.source === 'sunbeam' && !task.attendees.length) pushTaskToOutlook(task, { quiet: true });
 }
 
 function deleteTask(id) {
@@ -1345,6 +1423,148 @@ function snoozeTask(id) {
   showToast(`Snoozed to ${formatTime12(task.time)}`, '⏰', 'Reminder');
   render();
   if (task.outlookEventId && task.source === 'sunbeam') pushTaskToOutlook(task, { quiet: true });
+}
+
+// ==========================================
+// EDIT DIALOG
+// Edits a Sunbeam plan or a meeting you organised; changes go to Outlook (and to guests).
+// ==========================================
+let editingTaskId = null;
+
+function sameList(a, b) {
+  return a.length === b.length && a.every(x => b.includes(x));
+}
+
+function updateEditDialogHints() {
+  const task = tasks.find(t => t.id === editingTaskId);
+  if (!task) return;
+  const allDay = $('edit-allday').checked;
+  $('edit-time').disabled = allDay;
+  $('edit-duration').disabled = allDay;
+
+  const guests = parseEmails($('edit-invitees').value);
+  const added = guests.filter(g => !task.attendees.includes(g));
+  const removed = task.attendees.filter(g => !guests.includes(g));
+  const note = $('edit-dialog-note');
+  const saveBtn = $('edit-save-btn');
+  let msg = '';
+  saveBtn.textContent = 'Save';
+
+  if (task.outlookEventId || guests.length) {
+    if (!Outlook.connected) {
+      msg = 'You\'re not signed in to Outlook. The change is saved here and sent to Outlook when you press "Push unsynced plans" after connecting.';
+    } else if (!task.outlookEventId) {
+      msg = `This plan isn't on your calendar yet. Saving adds it and emails an invitation to ${guests.length} ${guests.length === 1 ? 'guest' : 'guests'}.`;
+      saveBtn.textContent = 'Save & send invites';
+    } else if (task.attendees.length || guests.length) {
+      const parts = [];
+      if (added.length) parts.push(`invites ${added.join(', ')}`);
+      if (removed.length) parts.push(`cancels it for ${removed.join(', ')}`);
+      msg = `Saving updates the Outlook meeting${parts.length ? ' and ' + parts.join(', and ') : ''}. Guests get an update email if the time or title changes.`;
+      saveBtn.textContent = added.length ? 'Save & send invites' : 'Save & update guests';
+    } else {
+      msg = 'Saving updates the event on your Outlook calendar.';
+    }
+  }
+  note.textContent = msg;
+  note.classList.toggle('hidden', !msg);
+}
+
+function openEditDialog(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task || !canEdit(task)) return;
+  editingTaskId = id;
+  $('edit-dialog-title').textContent = task.source === 'outlook' ? 'Edit Outlook meeting' : 'Edit plan';
+  $('edit-dialog-sub').textContent = task.source === 'outlook'
+    ? 'You organised this meeting, so your changes go to Outlook.'
+    : task.seriesId ? 'Repeating plan: this changes only this one.' : '';
+  $('edit-text').value = task.text;
+  $('edit-date').value = task.date;
+  $('edit-time').value = task.time || '09:00';
+  $('edit-duration').value = task.duration;
+  $('edit-allday').checked = !task.time;
+  $('edit-reminder').checked = task.reminder;
+  $('edit-category').value = task.category;
+  $('edit-priority').value = task.priority;
+  $('edit-invitees').value = task.attendees.join(', ');
+  // Area and priority are Sunbeam-only labels; they don't mean anything on someone else's invite list
+  $('edit-local-fields').classList.toggle('hidden', task.source === 'outlook');
+  updateEditDialogHints();
+  $('edit-dialog').showModal();
+  $('edit-text').focus();
+}
+
+function closeEditDialog() {
+  editingTaskId = null;
+  if ($('edit-dialog').open) $('edit-dialog').close();
+}
+
+async function saveEditDialog() {
+  const task = tasks.find(t => t.id === editingTaskId);
+  if (!task) return closeEditDialog();
+
+  const text = $('edit-text').value.trim();
+  const date = $('edit-date').value;
+  const allDay = $('edit-allday').checked;
+  const time = allDay ? '' : $('edit-time').value;
+  const duration = Math.max(5, Math.min(1440, Number($('edit-duration').value) || task.duration));
+  const bad = invalidEmails($('edit-invitees').value);
+
+  if (!text) return $('edit-text').focus();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return $('edit-date').focus();
+  if (!allDay && !time) return $('edit-time').focus();
+  if (bad.length) {
+    showToast(`These don't look like email addresses: ${bad.join(', ')}`, '⚠️', 'Guests');
+    return $('edit-invitees').focus();
+  }
+
+  const attendees = parseEmails($('edit-invitees').value);
+  const attendeesChanged = !sameList(attendees, task.attendees);
+  const outlookChanged = attendeesChanged || text !== task.text || date !== task.date || time !== task.time ||
+    duration !== task.duration || $('edit-reminder').checked !== task.reminder;
+
+  Object.assign(task, {
+    text, date, time, duration, attendees,
+    reminder: $('edit-reminder').checked,
+    category: task.source === 'outlook' ? task.category : $('edit-category').value,
+    priority: task.source === 'outlook' ? task.priority : $('edit-priority').value
+  });
+
+  const shouldSync = (task.outlookEventId && outlookChanged) || (!task.outlookEventId && task.source === 'sunbeam' && attendees.length);
+  closeEditDialog();
+  selectedDate = date;
+  render();
+
+  if (!shouldSync) {
+    sounds.playAdd();
+    showToast('Changes saved.', '✎', 'Updated');
+    return;
+  }
+  if (!Outlook.connected) {
+    task.needsSync = true;
+    task.needsAttendeeSync = task.needsAttendeeSync || attendeesChanged;
+    saveState();
+    render();
+    showToast('Saved here. Connect Outlook and press "Push unsynced plans" to update your calendar.', '⏳', 'Updated');
+    return;
+  }
+
+  const wasOnCalendar = !!task.outlookEventId;
+  const ok = await pushTaskToOutlook(task, { quiet: true, attendeesChanged });
+  if (!ok) {
+    task.needsSync = true;
+    task.needsAttendeeSync = task.needsAttendeeSync || attendeesChanged;
+    saveState();
+  }
+  render();
+  if (ok) {
+    sounds.playComplete();
+    showToast(wasOnCalendar
+      ? `Outlook updated${attendees.length ? ' and your guests notified' : ''}.`
+      : `Added to Outlook and invited ${attendees.length} ${attendees.length === 1 ? 'guest' : 'guests'}.`, '☁️', 'Updated');
+  } else {
+    showToast('Saved here, but Outlook didn\'t accept the change. See the Outlook tab for details.', '⚠️', 'Updated');
+  }
 }
 
 // ==========================================
@@ -1652,12 +1872,32 @@ function toggleDataMenu(force) {
 // ==========================================
 taskForm.addEventListener('submit', e => {
   e.preventDefault();
+  const bad = invalidEmails($('task-invitees-input').value);
+  if (bad.length) {
+    showToast(`These don't look like email addresses: ${bad.join(', ')}`, '⚠️', 'Guests');
+    $('task-invitees-input').focus();
+    return;
+  }
   addTask();
   taskInput.value = '';
   taskSubtasksInput.value = '';
+  $('task-invitees-input').value = '';
   taskRecurSelect.value = 'none';
   taskInput.focus();
 });
+
+$('edit-form').addEventListener('submit', e => {
+  e.preventDefault();
+  saveEditDialog();
+});
+$('edit-cancel-btn').addEventListener('click', closeEditDialog);
+$('edit-close-btn').addEventListener('click', closeEditDialog);
+$('edit-dialog').addEventListener('close', () => { editingTaskId = null; });
+// Clicking the dimmed backdrop closes the dialog
+$('edit-dialog').addEventListener('click', e => {
+  if (e.target === $('edit-dialog')) closeEditDialog();
+});
+['edit-invitees', 'edit-allday'].forEach(id => $(id).addEventListener('input', updateEditDialogHints));
 
 taskAutosyncCheck.addEventListener('change', () => {
   autoSyncDefault = taskAutosyncCheck.checked;

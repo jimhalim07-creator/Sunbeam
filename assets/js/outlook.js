@@ -111,24 +111,47 @@ const Outlook = {
 
   // ---------- Calendar ----------
 
-  eventPayload(task) {
+  eventTiming(task) {
+    if (!task.time) {
+      // All-day: midnight to midnight on the plan's date
+      return {
+        isAllDay: true,
+        start: { dateTime: `${task.date}T00:00:00`, timeZone: 'UTC' },
+        end: { dateTime: `${addDays(task.date, 1)}T00:00:00`, timeZone: 'UTC' }
+      };
+    }
     const start = taskStartDate(task);
     const end = new Date(start.getTime() + (task.duration || 60) * 60000);
-    const steps = Array.isArray(task.subtasks) && task.subtasks.length
-      ? '<ul>' + task.subtasks.map(st => `<li>${st.done ? '✓ ' : ''}${escapeHtml(st.text)}</li>`).join('') + '</ul>'
-      : '';
     return {
-      subject: `${task.completed ? '✓ ' : ''}${task.text}`,
-      body: {
-        contentType: 'HTML',
-        content: `<p><b>Area:</b> ${escapeHtml(task.category)} &nbsp;|&nbsp; <b>Priority:</b> ${escapeHtml(task.priority)}</p>${steps}<p style="color:#888">Added from Sunbeam Planner</p>`
-      },
+      isAllDay: false,
       start: { dateTime: toGraphUtc(start), timeZone: 'UTC' },
-      end: { dateTime: toGraphUtc(end), timeZone: 'UTC' },
+      end: { dateTime: toGraphUtc(end), timeZone: 'UTC' }
+    };
+  },
+
+  // Graph emails every attendee whenever an event with attendees is changed, so callers only
+  // include the attendee list when it actually changed, and the ✓ "done" marker never goes in
+  // the subject of an event that has guests.
+  eventPayload(task, { includeAttendees = true } = {}) {
+    const guests = includeAttendees ? { attendees: toGraphAttendees(task.attendees) } : {};
+    if (task.source === 'outlook') {
+      // A meeting imported from Outlook: only touch what Sunbeam lets you edit, never its body
+      return { subject: task.text, ...this.eventTiming(task), isReminderOn: !!task.reminder, ...guests };
+    }
+    const hasGuests = task.attendees.length > 0;
+    const steps = task.subtasks.length
+      ? '<ul>' + task.subtasks.map(st => `<li>${st.done && !hasGuests ? '✓ ' : ''}${escapeHtml(st.text)}</li>`).join('') + '</ul>'
+      : '';
+    const details = hasGuests ? '' : `<p><b>Area:</b> ${escapeHtml(task.category)} &nbsp;|&nbsp; <b>Priority:</b> ${escapeHtml(task.priority)}</p>`;
+    return {
+      subject: `${task.completed && !hasGuests ? '✓ ' : ''}${task.text}`,
+      body: { contentType: 'HTML', content: `${details}${steps}<p style="color:#888">Added from Sunbeam Planner</p>` },
+      ...this.eventTiming(task),
       isReminderOn: !!task.reminder,
       reminderMinutesBeforeStart: 15,
       showAs: 'busy',
-      categories: ['Sunbeam']
+      categories: ['Sunbeam'],
+      ...guests
     };
   },
 
@@ -137,8 +160,11 @@ const Outlook = {
     return { id: ev.id, webLink: ev.webLink };
   },
 
-  async updateEvent(task) {
-    await this.graph(`/me/events/${encodeURIComponent(task.outlookEventId)}`, { method: 'PATCH', body: this.eventPayload(task) });
+  async updateEvent(task, { attendeesChanged = false } = {}) {
+    await this.graph(`/me/events/${encodeURIComponent(task.outlookEventId)}`, {
+      method: 'PATCH',
+      body: this.eventPayload(task, { includeAttendees: attendeesChanged })
+    });
   },
 
   async deleteEvent(eventId) {
@@ -153,7 +179,7 @@ const Outlook = {
     const params = new URLSearchParams({
       startDateTime: startDate.toISOString(),
       endDateTime: endDate.toISOString(),
-      $select: 'id,subject,start,end,isAllDay,isCancelled,webLink,categories,reminderMinutesBeforeStart,isReminderOn',
+      $select: 'id,subject,start,end,isAllDay,isCancelled,webLink,categories,reminderMinutesBeforeStart,isReminderOn,isOrganizer,attendees',
       $orderby: 'start/dateTime',
       $top: '100'
     });
@@ -202,6 +228,10 @@ const Outlook = {
 // Outlook deep links show "+" literally, so encode spaces as %20 rather than using URLSearchParams.
 function queryString(obj) {
   return Object.entries(obj).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+}
+
+function toGraphAttendees(emails) {
+  return (emails || []).map(address => ({ emailAddress: { address }, type: 'required' }));
 }
 
 // Graph wants "YYYY-MM-DDTHH:mm:ss" without the trailing Z when timeZone is given.
