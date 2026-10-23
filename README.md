@@ -88,6 +88,10 @@ assets/js/outlook.js  Microsoft sign-in + Graph calls
 assets/js/app.js    planner logic
 ```
 
+## Publishing an update
+
+GitHub Pages lets browsers keep files for up to 10 minutes. When you change any file in `assets/` or `config.js`, also change the `?v=…` number on its `<link>`/`<script>` tag at the top and bottom of `index.html` (for example to today's date). That way browsers fetch the new file instead of mixing it with an old cached one.
+
 ## Moving your data
 
 Data lives in each browser separately. A page opened from disk and the same page on GitHub Pages count as different sites, so they keep separate data. Use **Data → Download backup** on the old one and **Data → Restore backup** on the new one.

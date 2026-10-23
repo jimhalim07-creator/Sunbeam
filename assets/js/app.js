@@ -1,4 +1,26 @@
 // ==========================================
+// 0. UPDATE SAFETY NET
+// Right after a new version is published, a browser can briefly mix cached old files with new
+// ones. If that breaks something, offer a one-click reload instead of leaving a half-drawn page.
+// ==========================================
+window.addEventListener('error', e => {
+  // Only our own files; ignore browser extensions and third-party scripts
+  if (!e.filename || !e.filename.startsWith(location.origin)) return;
+  if (document.getElementById('update-reload-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'update-reload-bar';
+  bar.className = 'fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-stone-900 text-amber-50 text-sm shadow-2xl';
+  bar.innerHTML = '<span>☀️ Sunbeam was just updated.</span>';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold';
+  btn.textContent = 'Reload';
+  btn.addEventListener('click', () => location.reload());
+  bar.appendChild(btn);
+  (document.body || document.documentElement).appendChild(bar);
+});
+
+// ==========================================
 // 1. HELPERS
 // ==========================================
 function formatYMD(dateObj) {
@@ -864,7 +886,8 @@ function updateDashboard() {
 function renderDailyQuote() {
   const today = todayYMD();
   const figure = $('daily-quote');
-  if (figure.dataset.date === today || typeof getQuoteOfTheDay !== 'function') return;
+  // Missing pieces mean the browser mixed an old cached page with new code; skip rather than break
+  if (!figure || figure.dataset.date === today || typeof getQuoteOfTheDay !== 'function') return;
   const q = getQuoteOfTheDay(today, WORK_DAYS);
   figure.dataset.date = today;
   $('quote-text').textContent = `“${q.text}”`;
