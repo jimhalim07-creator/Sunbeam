@@ -5,20 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sunbeam Planner</title>
   <meta name="description" content="A warm month, week and day planner that syncs with your Outlook calendar and email.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='26' fill='%23C8553D' opacity='.25'/%3E%3Ccircle cx='32' cy='32' r='17' fill='%23E9AE30' stroke='%232A4A91' stroke-width='3'/%3E%3C/svg%3E">
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
+    // Nile & papyrus palette: the familiar Tailwind colour names now mean
+    // stone = papyrus to lapis ink, amber = saffron gold, rose/orange = terracotta,
+    // sky/indigo = lapis lazuli, emerald = turquoise faience, purple = saffron (Learning)
+    const lapis = { 50: '#EEF3FB', 100: '#DCE6F6', 200: '#B8CBEB', 300: '#8AA7DA', 400: '#5B7FC4', 500: '#3A60AC', 600: '#2A4A91', 700: '#233C74', 800: '#1F335E', 900: '#1C2B4D', 950: '#111B33' };
+    const terracotta = { 50: '#FCF1EC', 100: '#F8DDD2', 200: '#F0BBA6', 300: '#E5937A', 400: '#D86F52', 500: '#C8553D', 600: '#AB4330', 700: '#8C3628', 800: '#6F2D24', 900: '#5A2620', 950: '#33130F' };
+    const saffron = { 50: '#FEF7E6', 100: '#FCEBC2', 200: '#F8D98A', 300: '#F2C354', 400: '#E9AE30', 500: '#D9961A', 600: '#B97912', 700: '#925C12', 800: '#744815', 900: '#5F3C16', 950: '#361F08' };
     tailwind.config = {
-      theme: { extend: { boxShadow: { xs: '0 1px 2px 0 rgba(120, 95, 70, 0.08)' } } }
+      theme: {
+        extend: {
+          boxShadow: { xs: '0 1px 2px 0 rgba(70, 45, 10, 0.10)' },
+          colors: {
+            stone: { 50: '#FBF6EC', 100: '#F3EAD8', 200: '#E6D8BD', 300: '#D3BF9C', 400: '#A8957A', 500: '#7D6E5C', 600: '#5E5348', 700: '#423D3A', 800: '#2A2E3A', 900: '#1B2238', 950: '#111628' },
+            amber: saffron,
+            purple: saffron,
+            rose: terracotta,
+            orange: terracotta,
+            sky: lapis,
+            indigo: lapis,
+            emerald: { 50: '#EAF8F6', 100: '#CCEFEA', 200: '#9DDFD6', 300: '#66C8BC', 400: '#35AEA1', 500: '#1F9488', 600: '#17776E', 700: '#165F59', 800: '#154C48', 900: '#143F3C', 950: '#0A2422' }
+          }
+        }
+      }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.10.24">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,500..800,0..100,0..1;1,9..144,400..700,0..100,0..1&family=Karla:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.10.25">
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-amber-200 selection:text-amber-950">
+<body class="min-h-screen flex flex-col antialiased selection:bg-amber-200 selection:text-stone-900">
 
   <!-- Toast -->
   <aside id="toast-container" class="fixed top-5 inset-x-0 sm:inset-x-auto sm:right-5 z-50 transition-all duration-300 transform -translate-y-24 opacity-0 pointer-events-none flex justify-center sm:block px-4" aria-live="polite">
@@ -32,16 +53,14 @@
   </aside>
 
   <!-- Header -->
-  <header class="bg-[#FFFDF9]/95 border-b border-[#EFE8DC] sticky top-0 z-40 backdrop-blur-md">
+  <header class="bg-[#FBF6EC]/90 sticky top-0 z-40 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 lg:py-0 lg:h-16 flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2.5">
 
       <!-- Brand -->
       <div class="flex items-center gap-3 shrink-0">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-white shadow-md shadow-amber-200/70">
-          <span class="text-xl leading-none">☀️</span>
-        </div>
+        <svg class="w-10 h-10 shrink-0" viewBox="0 0 64 64" aria-hidden="true"><g stroke="#C8553D" stroke-width="3" stroke-linecap="round" fill="none" style="color:#C8553D"><path d="M51.0 32.0 Q54.8 33.9 61.0 32.0"/><path d="M48.5 41.5 Q53.6 43.4 57.1 46.5"/><path d="M41.5 48.5 Q42.2 54.3 46.5 57.1"/><path d="M32.0 51.0 Q32.5 54.8 32.0 61.0"/><path d="M22.5 48.5 Q18.2 53.6 17.5 57.1"/><path d="M15.5 41.5 Q12.1 42.2 6.9 46.5"/><path d="M13.0 32.0 Q6.8 32.5 3.0 32.0"/><path d="M15.5 22.5 Q12.8 18.2 6.9 17.5"/><path d="M22.5 15.5 Q19.4 12.1 17.5 6.9"/><path d="M32.0 13.0 Q33.9 6.8 32.0 3.0"/><path d="M41.5 15.5 Q43.4 12.8 46.5 6.9"/><path d="M48.5 22.5 Q54.3 19.4 57.1 17.5"/></g><circle cx="32" cy="32" r="15" fill="#E9AE30"/><path d="M21 35c4 3 9 4 14 3 3-.6 6-2 8-4" stroke="#2A4A91" stroke-width="2.2" stroke-linecap="round" fill="none"/><circle cx="32" cy="32" r="15" fill="none" stroke="#2A4A91" stroke-width="1.6"/></svg>
         <div class="leading-tight">
-          <span class="text-xl font-bold font-serif-human text-stone-900 tracking-tight">Sunbeam</span>
+          <span class="text-[22px] font-bold font-serif-human text-stone-900">Sunbeam</span>
           <p id="header-date" class="text-[11px] text-stone-500 font-medium">Today</p>
         </div>
       </div>
@@ -53,130 +72,144 @@
           <span id="header-outlook-label">Outlook off</span>
         </button>
 
-        <button id="theme-toggle-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-100/70 hover:bg-amber-200/70 text-amber-950 border border-amber-300/70 transition-colors" title="Switch to Evening Mode" aria-label="Toggle evening mode">
-          <span id="theme-icon">🌙</span>
+        <button id="theme-toggle-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-xl bg-amber-100/70 hover:bg-amber-200/70 text-amber-800 border border-amber-300/70 transition-colors text-base" title="Switch to Evening Mode" aria-label="Toggle evening mode">
+          <span id="theme-icon" class="flex"><i data-lucide="moon"></i></span>
         </button>
 
         <button id="sound-toggle-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors" title="Mute sounds" aria-label="Toggle sounds" aria-pressed="true">
-          <span id="sound-icon">🔊</span>
+          <span id="sound-icon" class="flex text-base"><i data-lucide="volume-2"></i></span>
         </button>
 
         <!-- Data menu: export / backup / print -->
         <div class="relative">
           <button id="data-menu-btn" type="button" class="h-9 px-3 flex items-center gap-1.5 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 transition-colors" aria-haspopup="true" aria-expanded="false">
-            <span>💾</span>
+            <i data-lucide="archive"></i>
             <span class="hidden sm:inline">Data</span>
-            <span class="text-[10px]">▾</span>
+            <i data-lucide="chevron-down" class="opacity-60"></i>
           </button>
           <div id="data-menu" class="hidden absolute right-0 mt-2 w-56 warm-card rounded-2xl p-1.5 z-50 text-xs" role="menu">
-            <button type="button" data-action="export-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📤</span>Download backup (.json)</button>
-            <button type="button" data-action="import-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📂</span>Restore backup…</button>
-            <button type="button" data-action="export-csv" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📥</span>Export to CSV</button>
-            <button type="button" data-action="export-ics" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">📅</span>Export calendar (.ics)</button>
+            <button type="button" data-action="export-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 flex justify-center text-stone-500"><i data-lucide="upload"></i></span>Download backup (.json)</button>
+            <button type="button" data-action="import-json" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 flex justify-center text-stone-500"><i data-lucide="folder-open"></i></span>Restore backup…</button>
+            <button type="button" data-action="export-csv" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 flex justify-center text-stone-500"><i data-lucide="download"></i></span>Export to CSV</button>
+            <button type="button" data-action="export-ics" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 flex justify-center text-stone-500"><i data-lucide="calendar"></i></span>Export calendar (.ics)</button>
             <div class="h-px bg-stone-100 my-1"></div>
-            <button type="button" data-action="print" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 text-center">🖨️</span>Print this view</button>
+            <button type="button" data-action="print" class="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-50 font-semibold text-stone-700 flex items-center gap-2" role="menuitem"><span class="w-5 flex justify-center text-stone-500"><i data-lucide="printer"></i></span>Print this view</button>
           </div>
           <input id="import-json-input" type="file" accept=".json,application/json" class="hidden">
         </div>
       </div>
 
       <!-- Navigation tabs: full-width second row on mobile, centred on desktop -->
-      <nav class="w-full lg:w-auto lg:order-2 flex items-center gap-1 bg-[#F3EDE2] p-1 rounded-2xl border border-[#E6DEC8] overflow-x-auto no-scrollbar" aria-label="Planner views">
-        <button type="button" data-view="day" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>☀️</span><span>Day</span></button>
-        <button type="button" data-view="week" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📅</span><span>Week</span></button>
-        <button type="button" data-view="month" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>🗓️</span><span>Month</span></button>
-        <button type="button" data-view="analysis" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📊</span><span>Insights</span></button>
+      <nav class="w-full lg:w-auto lg:order-2 flex items-center gap-1 bg-[#EFE3CA]/70 p-1 rounded-2xl border border-[#D9C6A0] overflow-x-auto no-scrollbar" aria-label="Planner views">
+        <button type="button" data-view="day" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="sun"></i><span>Day</span></button>
+        <button type="button" data-view="week" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="calendar-days"></i><span>Week</span></button>
+        <button type="button" data-view="month" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="calendar-range"></i><span>Month</span></button>
+        <button type="button" data-view="analysis" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="chart-column"></i><span>Insights</span></button>
         <button type="button" data-view="reminders" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 relative">
-          <span>🔔</span><span>Reminders</span>
+          <i data-lucide="bell"></i><span>Reminders</span>
           <span id="nav-reminder-badge" class="w-2 h-2 rounded-full bg-rose-500 absolute top-1 right-1 hidden"></span>
         </button>
-        <button type="button" data-view="outlook" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><span>📧</span><span>Outlook</span></button>
+        <button type="button" data-view="outlook" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="mail"></i><span>Outlook</span></button>
       </nav>
     </div>
+    <div class="nile-band" aria-hidden="true"></div>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- Hero -->
-    <section id="hero-banner-section" class="bg-gradient-to-br from-[#FFF9EE] via-[#FFFDF9] to-[#FCEEE9] rounded-3xl p-5 sm:p-7 border border-[#EFE3D0] shadow-sm transition-colors duration-300">
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+    <!-- Hero: hand-drawn sun and Nile waves behind a big greeting and the quote of the day -->
+    <section id="hero-banner-section" class="hero-art warm-card rounded-[28px] p-5 sm:p-8 pb-14 sm:pb-16 transition-colors duration-300">
+      <svg class="hero-sun" viewBox="0 0 220 220" aria-hidden="true"><defs><radialGradient id="sunDisk" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#F2C354"/><stop offset="1" stop-color="#D9961A"/></radialGradient></defs><g class="rays" stroke="#C8553D" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".5" style="color:#C8553D"><path d="M172.0 110.0 Q190.5 115.0 214.0 110.0"/><circle cx="214.0" cy="110.0" r="3" stroke="none" fill="currentColor"/><path d="M168.3 131.2 Q189.6 138.2 207.7 145.6"/><circle cx="207.7" cy="145.6" r="3" stroke="none" fill="currentColor"/><path d="M157.5 149.9 Q169.5 167.7 189.7 176.8"/><circle cx="189.7" cy="176.8" r="3" stroke="none" fill="currentColor"/><path d="M141.0 163.7 Q151.8 180.6 162.0 200.1"/><circle cx="162.0" cy="200.1" r="3" stroke="none" fill="currentColor"/><path d="M120.8 171.1 Q119.5 194.6 128.1 212.4"/><circle cx="128.1" cy="212.4" r="3" stroke="none" fill="currentColor"/><path d="M99.2 171.1 Q95.6 188.8 91.9 212.4"/><circle cx="91.9" cy="212.4" r="3" stroke="none" fill="currentColor"/><path d="M79.0 163.7 Q63.9 183.1 58.0 200.1"/><circle cx="58.0" cy="200.1" r="3" stroke="none" fill="currentColor"/><path d="M62.5 149.9 Q47.3 158.9 30.3 176.8"/><circle cx="30.3" cy="176.8" r="3" stroke="none" fill="currentColor"/><path d="M51.7 131.2 Q28.7 138.5 12.3 145.6"/><circle cx="12.3" cy="145.6" r="3" stroke="none" fill="currentColor"/><path d="M48.0 110.0 Q29.5 105.0 6.0 110.0"/><circle cx="6.0" cy="110.0" r="3" stroke="none" fill="currentColor"/><path d="M51.7 88.8 Q30.4 81.8 12.3 74.4"/><circle cx="12.3" cy="74.4" r="3" stroke="none" fill="currentColor"/><path d="M62.5 70.1 Q50.5 52.3 30.3 43.2"/><circle cx="30.3" cy="43.2" r="3" stroke="none" fill="currentColor"/><path d="M79.0 56.3 Q68.2 39.4 58.0 19.9"/><circle cx="58.0" cy="19.9" r="3" stroke="none" fill="currentColor"/><path d="M99.2 48.9 Q100.5 25.4 91.9 7.6"/><circle cx="91.9" cy="7.6" r="3" stroke="none" fill="currentColor"/><path d="M120.8 48.9 Q124.4 31.2 128.1 7.6"/><circle cx="128.1" cy="7.6" r="3" stroke="none" fill="currentColor"/><path d="M141.0 56.3 Q156.1 36.9 162.0 19.9"/><circle cx="162.0" cy="19.9" r="3" stroke="none" fill="currentColor"/><path d="M157.5 70.1 Q172.7 61.1 189.7 43.2"/><circle cx="189.7" cy="43.2" r="3" stroke="none" fill="currentColor"/><path d="M168.3 88.8 Q191.3 81.5 207.7 74.4"/><circle cx="207.7" cy="74.4" r="3" stroke="none" fill="currentColor"/></g><circle cx="110" cy="110" r="50" fill="url(#sunDisk)" opacity=".9"/><circle cx="110" cy="110" r="57" fill="none" stroke="#2A4A91" stroke-width="1.5" stroke-dasharray="1 7" stroke-linecap="round" opacity=".55"/></svg>
+      <svg class="hero-waves" viewBox="0 0 1200 56" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke-linecap="round"><path d="M0 22 Q30.0 15 60 22 Q90.0 29 120 22 Q150.0 15 180 22 Q210.0 29 240 22 Q270.0 15 300 22 Q330.0 29 360 22 Q390.0 15 420 22 Q450.0 29 480 22 Q510.0 15 540 22 Q570.0 29 600 22 Q630.0 15 660 22 Q690.0 29 720 22 Q750.0 15 780 22 Q810.0 29 840 22 Q870.0 15 900 22 Q930.0 29 960 22 Q990.0 15 1020 22 Q1050.0 29 1080 22 Q1110.0 15 1140 22 Q1170.0 29 1200 22" stroke="#2A4A91" stroke-width="2" opacity=".22"/><path d="M0 34 Q30.0 28 48 34 Q78.0 40 96 34 Q126.0 28 144 34 Q174.0 40 192 34 Q222.0 28 240 34 Q270.0 40 288 34 Q318.0 28 336 34 Q366.0 40 384 34 Q414.0 28 432 34 Q462.0 40 480 34 Q510.0 28 528 34 Q558.0 40 576 34 Q606.0 28 624 34 Q654.0 40 672 34 Q702.0 28 720 34 Q750.0 40 768 34 Q798.0 28 816 34 Q846.0 40 864 34 Q894.0 28 912 34 Q942.0 40 960 34 Q990.0 28 1008 34 Q1038.0 40 1056 34 Q1086.0 28 1104 34 Q1134.0 40 1152 34 Q1182.0 28 1200 34" stroke="#1F9488" stroke-width="2" opacity=".3"/><path d="M0 45 Q16.0 40 40 45 Q56.0 50 80 45 Q96.0 40 120 45 Q136.0 50 160 45 Q176.0 40 200 45 Q216.0 50 240 45 Q256.0 40 280 45 Q296.0 50 320 45 Q336.0 40 360 45 Q376.0 50 400 45 Q416.0 40 440 45 Q456.0 50 480 45 Q496.0 40 520 45 Q536.0 50 560 45 Q576.0 40 600 45 Q616.0 50 640 45 Q656.0 40 680 45 Q696.0 50 720 45 Q736.0 40 760 45 Q776.0 50 800 45 Q816.0 40 840 45 Q856.0 50 880 45 Q896.0 40 920 45 Q936.0 50 960 45 Q976.0 40 1000 45 Q1016.0 50 1040 45 Q1056.0 40 1080 45 Q1096.0 50 1120 45 Q1136.0 40 1160 45 Q1176.0 50 1200 45" stroke="#E9AE30" stroke-width="2" opacity=".35"/></svg>
+      <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-7">
 
-        <div class="flex items-center gap-5 min-w-0">
-          <div class="relative w-24 h-24 flex items-center justify-center shrink-0 bg-white rounded-full shadow-inner border border-amber-100">
+        <div class="flex items-start gap-5 min-w-0">
+          <div class="relative w-24 h-24 flex items-center justify-center shrink-0 rounded-full bg-[#FFF8E8] border border-[#E3D3B5] shadow-inner mt-1">
             <svg class="w-24 h-24" viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="text-amber-100/80" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
-              <circle id="progress-circle" class="text-amber-500 progress-ring-circle" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#1F9488"/><stop offset=".55" stop-color="#E9AE30"/><stop offset="1" stop-color="#C8553D"/>
+                </linearGradient>
+              </defs>
+              <circle stroke="#EADCC0" stroke-width="7" fill="transparent" r="40" cx="50" cy="50" stroke-dasharray="2 4" />
+              <circle id="progress-circle" class="progress-ring-circle" stroke="url(#ringGrad)" stroke-width="7" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" fill="transparent" r="40" cx="50" cy="50" />
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span id="progress-percent" class="text-xl font-extrabold text-stone-900 leading-none tabular-nums">0%</span>
-              <span class="text-[9px] uppercase font-bold text-stone-400 mt-0.5 tracking-wider">Today</span>
+              <span id="progress-percent" class="text-xl font-extrabold font-serif-human text-stone-900 leading-none tabular-nums">0%</span>
+              <span class="text-[9px] uppercase font-bold text-stone-500 mt-0.5 tracking-[0.18em]">Today</span>
             </div>
           </div>
 
-          <div class="space-y-1.5 min-w-0">
-            <span id="rank-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100/80 text-rose-900 border border-rose-200">
-              <span id="rank-emoji">🌱</span>
-              <span id="rank-text">Cozy Start</span>
-            </span>
+          <div class="space-y-2.5 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="hero-date" class="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-600"></span>
+              <span id="rank-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span id="rank-emoji" class="flex"></span>
+                <span id="rank-text">Cozy Start</span>
+              </span>
+            </div>
 
-            <div class="flex items-baseline gap-2 flex-wrap">
-              <h1 id="view-greeting" class="text-xl sm:text-2xl font-bold font-serif-human text-stone-900">Good morning, friend ☀️</h1>
-              <button id="edit-name-btn" type="button" class="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline decoration-amber-400/60">Personalize</button>
+            <div class="flex items-baseline gap-3 flex-wrap">
+              <h1 id="view-greeting" class="text-[2rem] sm:text-[2.6rem] leading-[1.1] font-semibold font-serif-human text-stone-900">Good morning</h1>
+              <button id="edit-name-btn" type="button" class="text-[11px] font-semibold text-stone-500 hover:text-sky-700 underline decoration-dotted underline-offset-4">Change name</button>
             </div>
 
             <form id="name-editor-row" class="hidden items-center gap-2 pt-1">
               <input id="user-name-input" type="text" placeholder="Your first name…" maxlength="40" class="px-2.5 py-1 text-xs rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
-              <button id="save-name-btn" type="submit" class="px-2.5 py-1 text-xs font-bold bg-amber-500 text-white rounded-lg hover:bg-amber-600">Save</button>
+              <button id="save-name-btn" type="submit" class="px-2.5 py-1 text-xs font-bold bg-sky-700 text-white rounded-lg hover:bg-sky-800">Save</button>
             </form>
 
             <!-- Quote of the day (assets/js/quotes.js), changes at midnight in the planner's time zone -->
-            <figure id="daily-quote" class="max-w-xl pl-3 border-l-2 border-amber-300">
-              <span id="quote-occasion" class="hidden inline-block mb-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900"></span>
-              <blockquote id="quote-text" class="text-sm sm:text-[15px] text-stone-700 leading-relaxed font-serif-human italic"></blockquote>
-              <figcaption id="quote-author" class="text-[11px] font-semibold text-amber-800 mt-0.5"></figcaption>
+            <figure id="daily-quote" class="max-w-xl pt-1">
+              <span id="quote-occasion" class="hidden inline-block mb-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900"></span>
+              <blockquote class="relative pl-6">
+                <span class="absolute left-0 -top-2 text-4xl leading-none font-serif-human text-amber-400" aria-hidden="true">&ldquo;</span>
+                <span id="quote-text" class="block text-[15px] sm:text-lg text-stone-700 leading-snug font-serif-human italic"></span>
+              </blockquote>
+              <figcaption id="quote-author" class="pl-6 text-xs font-bold text-emerald-700 mt-1 tracking-wide"></figcaption>
             </figure>
           </div>
         </div>
 
-        <div class="flex flex-col gap-3 lg:w-[420px] shrink-0">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
-            <div class="bg-white/90 p-3 rounded-2xl border border-[#EFE3D0] shadow-xs">
-              <div class="text-[10px] font-bold uppercase text-stone-400">Planned</div>
-              <div id="stat-total" class="text-xl font-black text-stone-800 tabular-nums">0</div>
+        <div class="flex flex-col gap-3 lg:w-[420px] shrink-0 lg:mt-24">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 text-center">
+            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-sky-600">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-sky-700">Planned</div>
+              <div id="stat-total" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-emerald-50/90 p-3 rounded-2xl border border-emerald-200/80 shadow-xs">
-              <div class="text-[10px] font-bold uppercase text-emerald-700">Done</div>
-              <div id="stat-completed" class="text-xl font-black text-emerald-700 tabular-nums">0</div>
+            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-emerald-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Done</div>
+              <div id="stat-completed" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-amber-50/90 p-3 rounded-2xl border border-amber-200/80 shadow-xs">
-              <div class="text-[10px] font-bold uppercase text-amber-800">To Do</div>
-              <div id="stat-pending" class="text-xl font-black text-amber-800 tabular-nums">0</div>
+            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-amber-400">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-amber-700">To do</div>
+              <div id="stat-pending" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-rose-50/90 p-3 rounded-2xl border border-rose-200/80 shadow-xs">
-              <div class="text-[10px] font-bold uppercase text-rose-700">Nudges</div>
-              <div id="stat-reminders" class="text-xl font-black text-rose-700 tabular-nums">0</div>
+            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-rose-500">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Nudges</div>
+              <div id="stat-reminders" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center justify-between gap-2 bg-white/80 px-3 py-2 rounded-2xl border border-[#EFE3D0] text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-[#FFF8E8]/80 px-3 py-2 rounded-xl border border-[#E3D3B5] text-xs">
             <span class="font-semibold text-stone-600">How's your energy?</span>
             <div class="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="Daily energy level">
-              <button type="button" data-mood="gentle" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Taking it slow">🌱 Gentle</button>
-              <button type="button" data-mood="steady" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Steady flow">☕ Steady</button>
-              <button type="button" data-mood="spark" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="Feeling creative">✨ Inspired</button>
-              <button type="button" data-mood="fire" class="mood-btn px-2 py-1 rounded-lg transition-all" role="radio" title="High energy">🔥 Focused</button>
+              <button type="button" data-mood="gentle" class="mood-btn" role="radio" title="Taking it slow"><i data-lucide="sprout"></i>Gentle</button>
+              <button type="button" data-mood="steady" class="mood-btn" role="radio" title="Steady flow"><i data-lucide="coffee"></i>Steady</button>
+              <button type="button" data-mood="spark" class="mood-btn" role="radio" title="Feeling creative"><i data-lucide="sparkles"></i>Inspired</button>
+              <button type="button" data-mood="fire" class="mood-btn" role="radio" title="High energy"><i data-lucide="flame"></i>Focused</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="mt-5 pt-3.5 border-t border-[#EFE3D0]/80">
+      <div class="mt-6 pt-4 border-t border-dashed border-[#D9C6A0]">
         <div class="flex justify-between items-center text-xs text-stone-600 mb-1.5">
-          <span class="font-medium">Today's progress</span>
-          <span id="progress-text" class="font-bold text-amber-800 tabular-nums">0 of 0 done</span>
+          <span class="font-semibold">Today's progress</span>
+          <span id="progress-text" class="font-bold text-stone-800 tabular-nums">0 of 0 done</span>
         </div>
-        <div class="w-full bg-[#EFE6D8] rounded-full h-2.5 overflow-hidden">
-          <div id="progress-bar" class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 h-2.5 rounded-full transition-all duration-500 w-0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="w-full bg-[#EADCC0] rounded-full h-2 overflow-hidden">
+          <div id="progress-bar" class="bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-500 h-2 rounded-full transition-all duration-500 w-0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
         </div>
       </div>
     </section>
@@ -210,7 +243,7 @@
 
           <!-- Intention -->
           <div class="warm-card p-4 rounded-2xl flex items-center gap-3">
-            <span class="text-xl leading-none">🌿</span>
+            <span class="icon-badge bg-emerald-100 text-emerald-700"><i data-lucide="leaf"></i></span>
             <div class="flex-1 min-w-0">
               <label for="daily-intention-input" class="block text-[11px] font-bold uppercase tracking-wider text-amber-800">Today's small intention</label>
               <input id="daily-intention-input" type="text" placeholder="A kind thought for yourself today…" class="w-full bg-transparent text-xs sm:text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none mt-0.5 font-medium">
@@ -220,8 +253,8 @@
           <!-- Search -->
           <div class="warm-card p-3.5 rounded-2xl flex flex-wrap items-center gap-3">
             <div class="relative flex-1 min-w-[200px]">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">🔍</span>
-              <input id="task-search-input" type="search" placeholder="Search plans, categories or steps…" class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-stone-200 bg-[#FAF8F5] focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none flex"><i data-lucide="search"></i></span>
+              <input id="task-search-input" type="search" placeholder="Search plans, categories or steps…" class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-stone-200 bg-[#FBF6EC] focus:outline-none focus:ring-2 focus:ring-amber-400">
             </div>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-stone-600 cursor-pointer select-none">
               <input id="search-all-dates-check" type="checkbox" class="w-4 h-4 text-amber-600 rounded border-stone-300 focus:ring-amber-500">
@@ -233,7 +266,7 @@
           <div class="warm-card p-5 rounded-3xl min-h-[300px]">
             <div class="flex items-center justify-between mb-4 border-b border-stone-100 pb-3">
               <div class="flex items-baseline gap-2">
-                <h3 class="text-sm font-bold font-serif-human text-stone-800">Your plans for the day</h3>
+                <h3 class="text-base font-bold font-serif-human text-stone-900">Your plans for the day</h3>
                 <span id="task-count" class="text-xs text-stone-400">0 plans</span>
               </div>
               <span class="text-xs text-stone-400 hidden sm:inline">Tap a plan to check it off</span>
@@ -242,7 +275,7 @@
             <ul id="task-list" class="space-y-3"></ul>
 
             <div id="empty-state" class="text-center py-12 text-stone-400 hidden">
-              <div class="text-4xl mb-2">☕</div>
+              <div class="text-4xl mb-2 flex justify-center text-amber-500"><i data-lucide="coffee"></i></div>
               <p class="text-sm font-bold font-serif-human text-stone-700">A peaceful, open day!</p>
               <p class="text-xs text-stone-400 mt-1">Nothing here yet. Add a plan whenever you feel ready.</p>
             </div>
@@ -253,34 +286,34 @@
         <div class="space-y-5">
 
           <div id="task-form-card" class="warm-card p-5 rounded-3xl">
-            <h3 class="text-base font-bold font-serif-human text-stone-900 mb-1 flex items-center gap-2"><span>✍️</span><span>Jot down a plan</span></h3>
+            <h3 class="text-base font-bold font-serif-human text-stone-900 mb-1 flex items-center gap-2"><span class="icon-badge bg-amber-100 text-amber-700"><i data-lucide="feather"></i></span><span>Jot down a plan</span></h3>
             <p class="text-xs text-stone-500 mb-4">Shows up in your Day, Week and Month views.</p>
 
             <form id="task-form" class="space-y-3.5">
               <div>
                 <label for="task-input" class="block text-xs font-bold text-stone-600 mb-1">What would you like to do?</label>
-                <input type="text" id="task-input" placeholder="e.g., Call Mom, finish design review…" required maxlength="200" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-[#FAF8F5]">
+                <input type="text" id="task-input" placeholder="e.g., Call Mom, finish design review…" required maxlength="200" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-[#FBF6EC]">
               </div>
 
               <div>
                 <label for="task-subtasks-input" class="block text-xs font-bold text-stone-600 mb-1">Small steps <span class="font-normal text-stone-400">(optional, comma-separated)</span></label>
-                <input type="text" id="task-subtasks-input" placeholder="Outline, add charts, send draft" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                <input type="text" id="task-subtasks-input" placeholder="Outline, add charts, send draft" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
               </div>
 
               <div>
                 <label for="task-invitees-input" class="block text-xs font-bold text-stone-600 mb-1">Invite people <span class="font-normal text-stone-400">(optional, emails)</span></label>
-                <input type="text" id="task-invitees-input" placeholder="sara@cef-eg.org, omar@example.com" autocomplete="off" spellcheck="false" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                <input type="text" id="task-invitees-input" placeholder="sara@cef-eg.org, omar@example.com" autocomplete="off" spellcheck="false" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
                 <p class="text-[11px] text-stone-400 mt-1">Outlook sends them a meeting invitation.</p>
               </div>
 
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label for="task-date-input" class="block text-xs font-bold text-stone-600 mb-1">Date</label>
-                  <input type="date" id="task-date-input" required class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                  <input type="date" id="task-date-input" required class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
                 </div>
                 <div>
                   <label for="task-time-input" class="block text-xs font-bold text-stone-600 mb-1">Time</label>
-                  <input type="time" id="task-time-input" value="09:00" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                  <input type="time" id="task-time-input" value="09:00" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
                 </div>
               </div>
               <p id="task-hours-hint" class="hidden -mt-1.5 text-[11px] font-semibold text-indigo-700">🌙</p>
@@ -288,16 +321,16 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label for="task-category-select" class="block text-xs font-bold text-stone-600 mb-1">Life area</label>
-                  <select id="task-category-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-                    <option value="Work">💼 Work</option>
-                    <option value="Personal">🏠 Personal</option>
-                    <option value="Health">🥗 Health</option>
-                    <option value="Learning">📚 Learning</option>
+                  <select id="task-category-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
+                    <option value="Work">Work</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Health">Health</option>
+                    <option value="Learning">Learning</option>
                   </select>
                 </div>
                 <div>
                   <label for="task-duration-select" class="block text-xs font-bold text-stone-600 mb-1">Length</label>
-                  <select id="task-duration-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+                  <select id="task-duration-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
                     <option value="15">15 min</option>
                     <option value="30">30 min</option>
                     <option value="60" selected>1 hour</option>
@@ -309,19 +342,19 @@
 
               <div>
                 <label for="task-recur-select" class="block text-xs font-bold text-stone-600 mb-1">Repeat</label>
-                <select id="task-recur-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-                  <option value="none">🎯 Just once</option>
-                  <option value="daily">🔁 Daily for 7 days</option>
-                  <option value="weekly">📅 Weekly for 4 weeks</option>
+                <select id="task-recur-select" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
+                  <option value="none">Just once</option>
+                  <option value="daily">Daily for 7 days</option>
+                  <option value="weekly">Weekly for 4 weeks</option>
                 </select>
               </div>
 
               <div>
                 <span class="block text-xs font-bold text-stone-600 mb-1">Priority</span>
                 <div class="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Priority">
-                  <button type="button" data-priority="high" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">🔥 High</button>
-                  <button type="button" data-priority="medium" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">⚡ Medium</button>
-                  <button type="button" data-priority="low" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio">☕ Chill</button>
+                  <button type="button" data-priority="high" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio"><i data-lucide="flame"></i>High</button>
+                  <button type="button" data-priority="medium" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio"><i data-lucide="zap"></i>Medium</button>
+                  <button type="button" data-priority="low" class="priority-chip h-8 rounded-lg border text-xs transition-all" role="radio"><i data-lucide="coffee"></i>Chill</button>
                 </div>
               </div>
 
@@ -338,8 +371,8 @@
                 <span id="form-sync-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 whitespace-nowrap">Not connected</span>
               </label>
 
-              <button type="submit" id="add-btn" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-amber-200/80">
-                Add plan
+              <button type="submit" id="add-btn" class="w-full py-2.5 bg-sky-700 hover:bg-sky-800 text-amber-50 text-sm font-bold rounded-xl transition-all shadow-md shadow-sky-900/20 flex items-center justify-center gap-2">
+                <i data-lucide="plus"></i>Add plan
               </button>
             </form>
           </div>
@@ -347,12 +380,12 @@
           <!-- Focus timer -->
           <div id="focus-card" class="warm-card p-5 rounded-3xl">
             <div class="flex items-center justify-between gap-2 mb-3">
-              <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>🍅</span><span>Focus timer</span></h3>
+              <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span class="icon-badge bg-rose-100 text-rose-700"><i data-lucide="timer"></i></span><span>Focus timer</span></h3>
               <span id="focus-sessions-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 whitespace-nowrap">0 sessions today</span>
             </div>
 
-            <p id="focus-active-task-label" class="text-xs text-stone-600 truncate mb-3 bg-[#FAF6F0] px-3 py-1.5 rounded-xl border border-[#EFE3D0]">
-              🎯 <span class="font-semibold text-stone-800">Any task (or press ▶ on a plan)</span>
+            <p id="focus-active-task-label" class="text-xs text-stone-600 truncate mb-3 bg-[#F7EEDD] px-3 py-1.5 rounded-xl border border-[#E3D3B5]">
+              <span class="font-semibold text-stone-800">Any task (or press ▶ on a plan)</span>
             </p>
 
             <div class="grid grid-cols-3 gap-1.5 mb-4 text-xs" role="group" aria-label="Timer presets">
@@ -361,7 +394,7 @@
               <button type="button" data-minutes="5" class="timer-preset-btn py-1.5 rounded-xl transition-all">5m Break</button>
             </div>
 
-            <div class="text-center py-4 bg-[#FAF6F0] rounded-2xl border border-[#EFE3D0] mb-4">
+            <div class="text-center py-4 bg-[#F7EEDD] rounded-2xl border border-[#E3D3B5] mb-4">
               <div id="focus-timer-display" class="text-4xl font-extrabold font-serif-human text-stone-900 tracking-tight tabular-nums">25:00</div>
               <div id="focus-timer-status" class="text-[11px] font-semibold text-amber-800 mt-1 px-3">Ready when you are</div>
               <div class="w-4/5 mx-auto bg-stone-200/80 rounded-full h-1.5 mt-3 overflow-hidden">
@@ -372,20 +405,20 @@
             <div class="grid grid-cols-[1fr_auto_auto] gap-2">
               <button id="timer-start-btn" type="button" class="py-2.5 px-3 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm">Start</button>
               <button id="timer-reset-btn" type="button" class="py-2.5 px-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors">Reset</button>
-              <button id="timer-finish-btn" type="button" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors" title="Finish this session now">✓ Done</button>
+              <button id="timer-finish-btn" type="button" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors" title="Finish this session now"><span class="flex items-center gap-1"><i data-lucide="check"></i>Done</span></button>
             </div>
           </div>
 
           <!-- Quick Outlook -->
           <div id="quick-outlook-card" class="warm-card p-4 rounded-2xl text-xs">
             <div class="font-bold flex items-center justify-between mb-1.5 text-sky-950">
-              <span class="flex items-center gap-1.5"><span>📧</span><span>Outlook</span></span>
+              <span class="flex items-center gap-1.5 text-sm font-serif-human"><i data-lucide="mail"></i><span>Outlook</span></span>
               <span id="quick-outlook-status" class="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold truncate max-w-[60%]">Not connected</span>
             </div>
             <p id="quick-outlook-desc" class="text-stone-600 leading-relaxed mb-3">Connect your Microsoft account to put plans on your calendar and email yourself the day.</p>
             <div class="grid grid-cols-2 gap-2">
               <button id="quick-email-outlook-btn" type="button" class="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">Email today</button>
-              <button id="quick-pull-outlook-btn" type="button" class="py-2 px-3 bg-white hover:bg-sky-50 text-sky-800 border border-sky-200 font-bold rounded-xl transition-colors">Import events</button>
+              <button id="quick-pull-outlook-btn" type="button" class="py-2 px-3 bg-white hover:bg-sky-50 text-sky-800 border border-sky-200 font-bold rounded-xl transition-colors">Sync now</button>
             </div>
           </div>
         </div>
@@ -455,18 +488,18 @@
       </div>
 
       <div class="warm-card p-6 rounded-3xl">
-        <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2 mb-4"><span>🧭</span><span>Day, week and month at a glance</span></h4>
+        <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2 mb-4"><span class="icon-badge bg-sky-100 text-sky-700"><i data-lucide="compass"></i></span><span>Day, week and month at a glance</span></h4>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>☀️ Selected day</span><span id="horizon-day-stat" class="text-amber-700 tabular-nums">0/0</span></div>
+          <div class="p-4 rounded-2xl bg-[#F7EEDD] border border-[#E3D3B5]">
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>Selected day</span><span id="horizon-day-stat" class="text-amber-700 tabular-nums">0/0</span></div>
             <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-day-bar" class="bg-amber-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
-          <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>📅 Shown week</span><span id="horizon-week-stat" class="text-rose-700 tabular-nums">0/0</span></div>
+          <div class="p-4 rounded-2xl bg-[#F7EEDD] border border-[#E3D3B5]">
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>Shown week</span><span id="horizon-week-stat" class="text-rose-700 tabular-nums">0/0</span></div>
             <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-week-bar" class="bg-rose-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
-          <div class="p-4 rounded-2xl bg-[#FAF6F0] border border-[#EFE3D0]">
-            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>🗓️ Shown month</span><span id="horizon-month-stat" class="text-emerald-700 tabular-nums">0/0</span></div>
+          <div class="p-4 rounded-2xl bg-[#F7EEDD] border border-[#E3D3B5]">
+            <div class="flex justify-between items-center text-xs font-bold text-stone-700 mb-1.5"><span>Shown month</span><span id="horizon-month-stat" class="text-emerald-700 tabular-nums">0/0</span></div>
             <div class="w-full bg-stone-200 rounded-full h-2 overflow-hidden"><div id="horizon-month-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500 w-0"></div></div>
           </div>
         </div>
@@ -474,11 +507,11 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="warm-card p-6 rounded-3xl space-y-4">
-          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>📊</span><span>Life balance</span></h4>
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span class="icon-badge bg-emerald-100 text-emerald-700"><i data-lucide="scale"></i></span><span>Life balance</span></h4>
           <div id="category-bars" class="space-y-3 pt-2"></div>
         </div>
         <div class="warm-card p-6 rounded-3xl space-y-4">
-          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>💡</span><span>Reflections</span></h4>
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span class="icon-badge bg-amber-100 text-amber-700"><i data-lucide="lightbulb"></i></span><span>Reflections</span></h4>
           <div id="insights-container" class="space-y-3 pt-2"></div>
         </div>
       </div>
@@ -488,19 +521,19 @@
     <section id="view-reminders-container" class="view-section space-y-5 hidden">
       <div class="warm-card p-5 rounded-3xl flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>🔔</span><span>Reminders</span></h3>
+          <h3 class="text-base font-bold font-serif-human text-stone-900 flex items-center gap-2"><span class="icon-badge bg-rose-100 text-rose-700"><i data-lucide="bell"></i></span><span>Reminders</span></h3>
           <p class="text-xs text-stone-500">Sunbeam chimes 15 minutes before each of these while this tab is open.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button id="enable-notifications-btn" type="button" class="h-9 px-4 bg-sky-50 hover:bg-sky-100 text-sky-900 text-xs font-bold rounded-xl transition-colors border border-sky-200">Enable desktop alerts</button>
-          <button id="test-reminder-alert-btn" type="button" class="h-9 px-4 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl transition-colors border border-amber-200">🔔 Test chime</button>
+          <button id="test-reminder-alert-btn" type="button" class="h-9 px-4 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold rounded-xl transition-colors border border-amber-200">Test chime</button>
         </div>
       </div>
 
       <div class="warm-card p-5 rounded-3xl">
         <ul id="reminders-list" class="space-y-3"></ul>
         <div id="reminders-empty-state" class="text-center py-10 text-stone-400 hidden">
-          <div class="text-3xl mb-2">🌼</div>
+          <div class="text-3xl mb-2 flex justify-center text-emerald-500"><i data-lucide="flower-2"></i></div>
           <p class="text-sm font-bold font-serif-human text-stone-700">All quiet and peaceful!</p>
           <p class="text-xs text-stone-400 mt-0.5">No upcoming reminders.</p>
         </div>
@@ -514,7 +547,7 @@
       <div class="warm-card p-6 rounded-3xl">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div class="flex items-start gap-4 min-w-0">
-            <div class="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center text-2xl shrink-0">📧</div>
+            <div class="w-12 h-12 rounded-2xl bg-sky-700 text-amber-200 flex items-center justify-center text-2xl shrink-0"><i data-lucide="mail"></i></div>
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="text-xl font-bold font-serif-human text-stone-900">Microsoft Outlook</h3>
@@ -530,14 +563,14 @@
 
         <div id="outlook-connected-tools" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5 pt-5 border-t border-stone-100">
           <button id="ms-graph-sync-now-btn" type="button" class="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            <div class="text-sm font-bold text-emerald-900">🔄 Push unsynced plans</div>
+            <div class="text-sm font-bold text-emerald-900 flex items-center gap-1.5"><i data-lucide="upload"></i>Push unsynced plans</div>
             <div id="sync-now-desc" class="text-[11px] text-stone-600 mt-0.5">Adds plans that aren't on your calendar yet</div>
           </button>
           <button id="ms-graph-pull-btn" type="button" class="p-4 rounded-2xl border border-sky-200 bg-sky-50/60 hover:bg-sky-50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            <div class="text-sm font-bold text-sky-900">📥 Sync now</div>
+            <div class="text-sm font-bold text-sky-900 flex items-center gap-1.5"><i data-lucide="refresh-cw"></i>Sync now</div>
             <div class="text-[11px] text-stone-600 mt-0.5">Refreshes your calendar and restores your backed-up plans</div>
           </button>
-          <div class="p-4 rounded-2xl border border-stone-200 bg-[#FAF8F5]">
+          <div class="p-4 rounded-2xl border border-stone-200 bg-[#FBF6EC]">
             <span class="block text-sm font-bold text-stone-800">Automatic sync</span>
             <span class="block text-[11px] text-stone-600 mt-0.5">On sign-in, on opening, every 15 minutes, and for any month you browse to.</span>
             <span id="last-sync-label" class="block text-[11px] font-semibold text-emerald-800 mt-1"></span>
@@ -549,7 +582,7 @@
 
         <!-- Email -->
         <div class="warm-card p-6 rounded-3xl space-y-4">
-          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span>✉️</span><span>Email your plan</span></h4>
+          <h4 class="text-sm font-bold font-serif-human text-stone-900 flex items-center gap-2"><span class="icon-badge bg-sky-100 text-sky-700"><i data-lucide="send"></i></span><span>Email your plan</span></h4>
           <div>
             <label for="outlook-email-input" class="block text-xs font-bold text-stone-700 mb-1">Send to</label>
             <input id="outlook-email-input" type="email" placeholder="you@example.com" class="w-full px-3.5 py-2 text-sm rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
@@ -563,7 +596,7 @@
             <button id="graph-send-email-btn" type="button" class="h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Send now</button>
             <button id="outlook-web-compose-btn" type="button" class="h-10 px-4 bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold rounded-xl transition-colors">Open in Outlook web</button>
           </div>
-          <div class="p-3 rounded-2xl bg-[#FAF8F5] border border-stone-200">
+          <div class="p-3 rounded-2xl bg-[#FBF6EC] border border-stone-200">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs font-bold text-stone-700">Preview</span>
               <button id="copy-digest-btn" type="button" class="text-[11px] font-bold text-sky-700 hover:underline">Copy text</button>
@@ -576,7 +609,7 @@
           <!-- Setup -->
           <details id="outlook-setup-details" class="warm-card p-6 rounded-3xl group">
             <summary class="text-sm font-bold font-serif-human text-stone-900 flex items-center justify-between cursor-pointer list-none">
-              <span class="flex items-center gap-2"><span>🔧</span><span>One-time setup</span></span>
+              <span class="flex items-center gap-2"><span class="icon-badge bg-amber-100 text-amber-700"><i data-lucide="wrench"></i></span><span>One-time setup</span></span>
               <span class="text-xs text-stone-400 group-open:rotate-180 transition-transform">▾</span>
             </summary>
             <div class="space-y-4 mt-4 text-xs text-stone-600">
@@ -619,7 +652,7 @@
               <h4 class="text-sm font-bold font-serif-human text-stone-900">Activity</h4>
               <span id="synced-count-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">0 on calendar</span>
             </div>
-            <div id="graph-sync-log" class="text-[11px] text-stone-600 space-y-1.5 max-h-48 overflow-y-auto font-mono bg-[#FAF8F5] p-2.5 rounded-xl border border-stone-200/80">
+            <div id="graph-sync-log" class="text-[11px] text-stone-600 space-y-1.5 max-h-48 overflow-y-auto font-mono bg-[#FBF6EC] p-2.5 rounded-xl border border-stone-200/80">
               <div>Nothing yet.</div>
             </div>
           </div>
@@ -637,26 +670,26 @@
           <h3 id="edit-dialog-title" class="text-base font-bold font-serif-human text-stone-900">Edit plan</h3>
           <p id="edit-dialog-sub" class="text-[11px] text-stone-500"></p>
         </div>
-        <button type="button" id="edit-close-btn" class="w-8 h-8 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700 font-bold" aria-label="Close">✕</button>
+        <button type="button" id="edit-close-btn" class="w-8 h-8 rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700 font-bold" aria-label="Close"><span class="flex justify-center"><i data-lucide="x"></i></span></button>
       </div>
 
       <div>
         <label for="edit-text" class="block text-xs font-bold text-stone-600 mb-1">Title</label>
-        <input id="edit-text" type="text" required maxlength="200" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+        <input id="edit-text" type="text" required maxlength="200" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <div>
           <label for="edit-date" class="block text-xs font-bold text-stone-600 mb-1">Date</label>
-          <input id="edit-date" type="date" required class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
+          <input id="edit-date" type="date" required class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
         </div>
         <div>
           <label for="edit-time" class="block text-xs font-bold text-stone-600 mb-1">Start</label>
-          <input id="edit-time" type="time" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5] disabled:opacity-40">
+          <input id="edit-time" type="time" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC] disabled:opacity-40">
         </div>
         <div class="col-span-2 sm:col-span-1">
           <label for="edit-duration" class="block text-xs font-bold text-stone-600 mb-1">Length (min)</label>
-          <input id="edit-duration" type="number" min="5" max="1440" step="5" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5] disabled:opacity-40">
+          <input id="edit-duration" type="number" min="5" max="1440" step="5" class="w-full h-9 px-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC] disabled:opacity-40">
         </div>
       </div>
       <p id="edit-hours-hint" class="hidden -mt-1.5 text-[11px] font-semibold text-indigo-700"></p>
@@ -669,26 +702,26 @@
       <div id="edit-local-fields" class="grid grid-cols-2 gap-2">
         <div>
           <label for="edit-category" class="block text-xs font-bold text-stone-600 mb-1">Life area</label>
-          <select id="edit-category" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-            <option value="Work">💼 Work</option>
-            <option value="Personal">🏠 Personal</option>
-            <option value="Health">🥗 Health</option>
-            <option value="Learning">📚 Learning</option>
+          <select id="edit-category" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
+            <option value="Work">Work</option>
+            <option value="Personal">Personal</option>
+            <option value="Health">Health</option>
+            <option value="Learning">Learning</option>
           </select>
         </div>
         <div>
           <label for="edit-priority" class="block text-xs font-bold text-stone-600 mb-1">Priority</label>
-          <select id="edit-priority" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5]">
-            <option value="high">🔥 High</option>
-            <option value="medium">⚡ Medium</option>
-            <option value="low">☕ Chill</option>
+          <select id="edit-priority" class="w-full h-9 px-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC]">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Chill</option>
           </select>
         </div>
       </div>
 
       <div>
         <label for="edit-invitees" class="block text-xs font-bold text-stone-600 mb-1">Guests <span class="font-normal text-stone-400">(emails, separated by commas)</span></label>
-        <textarea id="edit-invitees" rows="2" spellcheck="false" placeholder="sara@cef-eg.org, omar@example.com" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FAF8F5] resize-y"></textarea>
+        <textarea id="edit-invitees" rows="2" spellcheck="false" placeholder="sara@cef-eg.org, omar@example.com" class="w-full px-3 py-2 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-[#FBF6EC] resize-y"></textarea>
       </div>
 
       <p id="edit-dialog-note" class="hidden text-[11px] font-semibold px-3 py-2 rounded-xl bg-sky-50 text-sky-900 border border-sky-200"></p>
@@ -704,10 +737,10 @@
     Your plans are saved in this browser. Use Data → Download backup to move them to another device.
   </footer>
 
-  <script src="config.js?v=2026.10.24" defer></script>
-  <script src="assets/js/sound.js?v=2026.10.24" defer></script>
-  <script src="assets/js/outlook.js?v=2026.10.24" defer></script>
-  <script src="assets/js/quotes.js?v=2026.10.24" defer></script>
-  <script src="assets/js/app.js?v=2026.10.24" defer></script>
+  <script src="config.js?v=2026.10.25" defer></script>
+  <script src="assets/js/sound.js?v=2026.10.25" defer></script>
+  <script src="assets/js/outlook.js?v=2026.10.25" defer></script>
+  <script src="assets/js/quotes.js?v=2026.10.25" defer></script>
+  <script src="assets/js/app.js?v=2026.10.25" defer></script>
 </body>
 </html>

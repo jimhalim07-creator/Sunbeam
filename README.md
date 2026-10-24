@@ -74,7 +74,16 @@ Then add `http://localhost:5500/auth-redirect.html` as a second SPA redirect URI
 | Delete a plan | The event is deleted |
 | Delete an imported Outlook meeting | Nothing. It's only hidden in Sunbeam; your real meeting is never touched. |
 
-Plans created while you were signed out can be sent later with **Push unsynced plans**.
+Plans created while you were signed out go up automatically the next time Sunbeam syncs.
+
+### Your plans are backed up in Outlook
+
+Sunbeam syncs when you sign in, when you open it, every 15 minutes, when you come back to the tab, and for any month you browse to. Your Outlook calendar doubles as Sunbeam's memory, so if your browser forgets everything (for example a work laptop that clears site data on close), signing in brings it all back:
+
+- **Plans on your calendar** keep their area, priority, steps and done state inside the event, as a hidden property that only Sunbeam reads.
+- **Your name and preferences, plans kept off the calendar, and ticks on meetings with guests** are saved as a hidden property on your calendar.
+
+Microsoft asks browser apps to sign in again about once a day. When that happens Sunbeam shows **Sign in again** instead of failing quietly, with your account already filled in.
 
 ## Files
 

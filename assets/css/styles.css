@@ -1,32 +1,96 @@
+/* =====================================================================
+   NILE & PAPYRUS
+   Papyrus paper, lapis ink, turquoise faience, terracotta and saffron gold.
+   Colours here match the remapped Tailwind palette in index.html.
+   ===================================================================== */
+:root {
+  --papyrus: #F4EAD6;
+  --papyrus-light: #FBF6EC;
+  --card: #FFFBF3;
+  --line: #E3D3B5;
+  --ink: #1B2238;
+  --lapis: #2A4A91;
+  --faience: #1F9488;
+  --terracotta: #C8553D;
+  --saffron: #D9961A;
+  --gold: #E9AE30;
+}
+
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background-color: #FAF6F0;
-  color: #2D2A26;
+  font-family: 'Karla', system-ui, sans-serif;
+  color: var(--ink);
+  background-color: var(--papyrus);
+  /* Paper grain plus faint horizontal papyrus fibres */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .33 0 0 0 0 .2 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(0deg, rgba(140, 110, 60, 0.035) 0 1px, transparent 1px 7px),
+    radial-gradient(1200px 600px at 85% -10%, rgba(233, 174, 48, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(31, 148, 136, 0.12), transparent 60%);
+  background-attachment: fixed;
 }
 .font-serif-human {
   font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: 'SOFT' 60, 'WONK' 1;
+  letter-spacing: -0.01em;
 }
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 .progress-ring-circle {
   transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   transform: rotate(-90deg);
   transform-origin: 50% 50%;
 }
 .warm-card {
-  background-color: #FFFFFF;
-  border: 1px solid #EFE8DC;
-  box-shadow: 0 4px 20px -4px rgba(120, 95, 70, 0.06);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 14px 30px -22px rgba(70, 45, 10, 0.45);
 }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Lucide line icons inherit text colour and size */
+[data-lucide], svg.lucide { width: 1em; height: 1em; flex-shrink: 0; }
+.icon-badge {
+  display: inline-grid; place-items: center;
+  width: 2rem; height: 2rem; border-radius: 0.8rem 0.5rem 0.8rem 0.5rem;
+  font-size: 1rem;
+}
+
+/* Egyptian collar band: a strip of lapis, faience, gold and terracotta */
+.nile-band {
+  height: 6px;
+  background:
+    repeating-linear-gradient(90deg,
+      var(--lapis) 0 18px, var(--papyrus-light) 18px 20px,
+      var(--faience) 20px 38px, var(--papyrus-light) 38px 40px,
+      var(--gold) 40px 58px, var(--papyrus-light) 58px 60px,
+      var(--terracotta) 60px 78px, var(--papyrus-light) 78px 80px);
+}
+
+/* Hero artwork: sun disk with rays and Nile waves, drawn in index.html */
+.hero-art { position: relative; overflow: hidden; isolation: isolate; }
+.hero-art .hero-sun { position: absolute; right: -40px; top: -48px; width: 220px; height: 220px; z-index: -1; opacity: 0.9; }
+.hero-art .hero-waves { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; width: 100%; z-index: -1; }
+@media (max-width: 640px) {
+  .hero-art .hero-sun { width: 150px; height: 150px; right: -62px; top: -62px; opacity: 0.45; }
+}
+@keyframes sun-turn { to { transform: rotate(360deg); } }
+.hero-sun .rays { transform-origin: 110px 110px; animation: sun-turn 120s linear infinite; }
+
+/* Hand-drawn underline under your name */
+.name-squiggle { position: relative; white-space: nowrap; color: var(--lapis); }
+.name-squiggle svg { position: absolute; left: -2%; bottom: -0.32em; width: 104%; height: 0.45em; overflow: visible; }
+
+/* Small saffron ornament before card headings */
+h3.font-serif-human, h4.font-serif-human { letter-spacing: -0.005em; }
+
+/* Category stripe on plans */
+.cat-stripe { box-shadow: inset 4px 0 0 var(--stripe, var(--line)); }
 
 /* Keep the focus ring visible for keyboard users on every button */
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #F59E0B;
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -37,7 +101,7 @@ summary:focus-visible {
 }
 .rise-in { animation: sunbeam-rise 0.25s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .rise-in, .progress-ring-circle { animation: none; transition: none; }
+  .rise-in, .progress-ring-circle, .hero-sun .rays { animation: none; transition: none; }
 }
 
 /* ========== Work week ========== */
@@ -45,33 +109,57 @@ summary:focus-visible {
 @media (min-width: 1024px) {
   #week-columns-grid { grid-template-columns: var(--week-cols, repeat(7, minmax(0, 1fr))); }
 }
-.weekend-col { background-color: #F7F2EA; box-shadow: none; }
+.weekend-col { background-color: #EFE3CB; box-shadow: none; }
 .weekend-col .week-task-card { opacity: 0.85; }
 body.evening-mode .warm-card.weekend-col,
 body.evening-mode .month-cell.weekend-cell { background-color: #201C19 !important; }
 body.evening-mode .text-indigo-700 { color: #C7D2FE !important; }
 
-/* ========== Cozy Evening / Twilight Theme ========== */
+/* ========== Evening: the Nile at night ========== */
 body.evening-mode {
-  background-color: #1A1715;
-  color: #F3EDE2;
+  background-color: #0E1524;
+  color: #EEE6D6;
   color-scheme: dark;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .75 0 0 0 0 .6 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(1000px 500px at 85% -10%, rgba(233, 174, 48, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(31, 148, 136, 0.14), transparent 60%);
 }
+body.evening-mode .name-squiggle { color: #F4CF7A; }
+/* Any papyrus-toned background (bg-[#F…] / bg-[#E…], with or without opacity) turns night-blue */
+body.evening-mode [class*="bg-[#F"],
+body.evening-mode [class*="bg-[#E"] {
+  background-color: #16213A !important;
+  border-color: #27355A !important;
+}
+body.evening-mode nav[aria-label="Planner views"] { background-color: #111A2E !important; }
+/* Keep the coloured top edges on the count tiles, and brighten coloured labels for night */
+body.evening-mode .border-t-4.border-t-sky-600 { border-top-color: #5B7FC4 !important; }
+body.evening-mode .border-t-4.border-t-emerald-500 { border-top-color: #35AEA1 !important; }
+body.evening-mode .border-t-4.border-t-amber-400 { border-top-color: #E9AE30 !important; }
+body.evening-mode .border-t-4.border-t-rose-500 { border-top-color: #D86F52 !important; }
+body.evening-mode .text-sky-700 { color: #A9C1EE !important; }
+body.evening-mode .text-emerald-700 { color: #8FDDD2 !important; }
+body.evening-mode .text-amber-700 { color: #F4CF7A !important; }
+body.evening-mode .text-rose-600,
+body.evening-mode .text-rose-700 { color: #F2A68F !important; }
+body.evening-mode .bg-\[\#EADCC0\] { background-color: #26324D !important; }
+body.evening-mode .nile-band { opacity: 0.85; }
 body.evening-mode header {
-  background-color: rgba(28, 25, 23, 0.95) !important;
-  border-color: #362F2A !important;
+  background-color: rgba(14, 21, 36, 0.92) !important;
+  border-color: #24304A !important;
 }
 body.evening-mode .warm-card,
 body.evening-mode .bg-white,
 body.evening-mode [class*="bg-white/"],
-body.evening-mode .bg-\[\#FAF8F5\],
-body.evening-mode .bg-\[\#FAF6F0\],
-body.evening-mode .bg-\[\#FFFDF7\],
-body.evening-mode .bg-\[\#F3EDE2\],
+body.evening-mode .bg-\[\#FBF6EC\],
+body.evening-mode .bg-\[\#F7EEDD\],
+body.evening-mode .bg-\[\#FFF8E8\],
+body.evening-mode .bg-\[\#EEE6D6\],
 body.evening-mode .bg-stone-50,
 body.evening-mode .bg-stone-100 {
-  background-color: #25211E !important;
-  border-color: #38312C !important;
+  background-color: #16213A !important;
+  border-color: #27355A !important;
 }
 body.evening-mode .warm-card {
   box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.45);
@@ -79,87 +167,87 @@ body.evening-mode .warm-card {
 body.evening-mode #task-list > li,
 body.evening-mode .week-task-card,
 body.evening-mode .month-cell {
-  background-color: #2B2622 !important;
-  border-color: #3D352E !important;
+  background-color: #1B2846 !important;
+  border-color: #2C3B60 !important;
 }
 body.evening-mode .bg-amber-50,
 body.evening-mode [class*="bg-amber-50/"],
 body.evening-mode .bg-amber-100,
 body.evening-mode [class*="bg-amber-100/"] {
-  background-color: rgba(245, 158, 11, 0.14) !important;
-  border-color: rgba(245, 158, 11, 0.3) !important;
+  background-color: rgba(233, 174, 48, 0.14) !important;
+  border-color: rgba(233, 174, 48, 0.3) !important;
 }
 body.evening-mode .bg-sky-50,
 body.evening-mode [class*="bg-sky-50/"],
 body.evening-mode .bg-sky-100 {
-  background-color: rgba(14, 165, 233, 0.14) !important;
-  border-color: rgba(14, 165, 233, 0.3) !important;
+  background-color: rgba(91, 127, 196, 0.14) !important;
+  border-color: rgba(91, 127, 196, 0.3) !important;
 }
 body.evening-mode .bg-emerald-50,
 body.evening-mode [class*="bg-emerald-50/"],
 body.evening-mode .bg-emerald-100 {
-  background-color: rgba(16, 185, 129, 0.14) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
+  background-color: rgba(53, 174, 161, 0.14) !important;
+  border-color: rgba(53, 174, 161, 0.3) !important;
 }
 body.evening-mode .bg-rose-50,
 body.evening-mode [class*="bg-rose-50/"],
 body.evening-mode .bg-rose-100,
 body.evening-mode [class*="bg-rose-100/"] {
-  background-color: rgba(244, 63, 94, 0.14) !important;
-  border-color: rgba(244, 63, 94, 0.3) !important;
+  background-color: rgba(216, 111, 82, 0.14) !important;
+  border-color: rgba(216, 111, 82, 0.3) !important;
 }
 body.evening-mode .bg-purple-50 {
-  background-color: rgba(168, 85, 247, 0.14) !important;
-  border-color: rgba(168, 85, 247, 0.3) !important;
+  background-color: rgba(233, 174, 48, 0.14) !important;
+  border-color: rgba(233, 174, 48, 0.3) !important;
 }
 body.evening-mode .bg-stone-200,
-body.evening-mode .bg-\[\#EFE6D8\] {
-  background-color: #3A332D !important;
+body.evening-mode .bg-\[\#E6D8BD\] {
+  background-color: #26324D !important;
 }
 body.evening-mode .text-stone-900,
 body.evening-mode .text-stone-800,
 body.evening-mode .text-stone-700 {
-  color: #F5EFE6 !important;
+  color: #EEE6D6 !important;
 }
 body.evening-mode .text-stone-600,
 body.evening-mode .text-stone-500 {
-  color: #C7B9A8 !important;
+  color: #AEB8CC !important;
 }
 body.evening-mode .text-amber-950,
 body.evening-mode .text-amber-900,
-body.evening-mode .text-amber-800 { color: #FCD9A0 !important; }
+body.evening-mode .text-amber-800 { color: #F4CF7A !important; }
 body.evening-mode .text-sky-950,
 body.evening-mode .text-sky-900,
-body.evening-mode .text-sky-800 { color: #A5DCF7 !important; }
+body.evening-mode .text-sky-800 { color: #A9C1EE !important; }
 body.evening-mode .text-emerald-900,
-body.evening-mode .text-emerald-800 { color: #A7EBCD !important; }
+body.evening-mode .text-emerald-800 { color: #8FDDD2 !important; }
 body.evening-mode .text-rose-950,
-body.evening-mode .text-rose-900 { color: #FBC2CC !important; }
+body.evening-mode .text-rose-900 { color: #F2A68F !important; }
 body.evening-mode .border-stone-100,
 body.evening-mode .border-stone-200,
 body.evening-mode .border-stone-300,
-body.evening-mode [class*="border-[#EF"] {
-  border-color: #3D352E !important;
+body.evening-mode [class*="border-[#E3"] {
+  border-color: #2C3B60 !important;
 }
 body.evening-mode input,
 body.evening-mode select,
 body.evening-mode textarea,
 body.evening-mode pre {
-  background-color: #1D1A17 !important;
-  border-color: #3D352E !important;
-  color: #F5EFE6 !important;
+  background-color: #111A2E !important;
+  border-color: #2C3B60 !important;
+  color: #EEE6D6 !important;
 }
 body.evening-mode #hero-banner-section {
-  background: linear-gradient(135deg, #28221D 0%, #1F1B18 55%, #2D2120 100%) !important;
-  border-color: #3D342B !important;
+  background: linear-gradient(160deg, #16213A 0%, #101A2F 60%, #1A2238 100%) !important;
+  border-color: #27355A !important;
 }
-body.evening-mode .hover-lift:hover { background-color: #332C27 !important; }
+body.evening-mode .hover-lift:hover { background-color: #1E2C4D !important; }
 
 /* ========== Scrollbars ========== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D5C7B8; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #B8A693; }
+::-webkit-scrollbar-thumb { background: #CDB892; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #A8916A; }
 
 /* ========== Print ========== */
 @media print {

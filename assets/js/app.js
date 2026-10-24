@@ -169,17 +169,18 @@ function sortByTime(a, b) {
 // ==========================================
 // 2. CONSTANTS
 // ==========================================
+// Each life area has its own Nile colour: lapis, terracotta, faience and saffron
 const CATEGORIES = {
-  Work: { label: '💼 Work', bar: 'bg-amber-500', tag: 'bg-amber-50 text-amber-900 border-amber-200/70' },
-  Personal: { label: '🏠 Personal', bar: 'bg-rose-400', tag: 'bg-rose-50 text-rose-900 border-rose-200/70' },
-  Health: { label: '🥗 Health', bar: 'bg-emerald-500', tag: 'bg-emerald-50 text-emerald-900 border-emerald-200/70' },
-  Learning: { label: '📚 Learning', bar: 'bg-purple-500', tag: 'bg-purple-50 text-purple-900 border-purple-200/70' }
+  Work: { label: 'Work', icon: 'briefcase', stripe: '#2A4A91', bar: 'bg-sky-600', tag: 'bg-sky-50 text-sky-800 border-sky-200' },
+  Personal: { label: 'Personal', icon: 'house', stripe: '#C8553D', bar: 'bg-rose-500', tag: 'bg-rose-50 text-rose-800 border-rose-200' },
+  Health: { label: 'Health', icon: 'heart-pulse', stripe: '#1F9488', bar: 'bg-emerald-500', tag: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  Learning: { label: 'Learning', icon: 'book-open', stripe: '#E9AE30', bar: 'bg-amber-400', tag: 'bg-amber-50 text-amber-800 border-amber-200' }
 };
 
 const PRIORITIES = {
-  high: { label: '🔥 High', tag: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', chipOn: 'bg-rose-50 border-rose-300 text-rose-700 font-bold shadow-xs', chipOff: 'bg-white border-rose-200 text-rose-700 font-medium' },
-  medium: { label: '⚡ Medium', tag: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500', chipOn: 'bg-amber-50 border-amber-300 text-amber-800 font-bold shadow-xs', chipOff: 'bg-white border-amber-200 text-amber-800 font-medium' },
-  low: { label: '☕ Chill', tag: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', chipOn: 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold shadow-xs', chipOff: 'bg-white border-emerald-200 text-emerald-700 font-medium' }
+  high: { label: 'High', icon: 'flame', tag: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', chipOn: 'bg-rose-50 border-rose-300 text-rose-700 font-bold shadow-xs', chipOff: 'bg-white border-rose-200 text-rose-700 font-medium' },
+  medium: { label: 'Medium', icon: 'zap', tag: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500', chipOn: 'bg-amber-50 border-amber-300 text-amber-800 font-bold shadow-xs', chipOff: 'bg-white border-amber-200 text-amber-800 font-medium' },
+  low: { label: 'Chill', icon: 'coffee', tag: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', chipOn: 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold shadow-xs', chipOff: 'bg-white border-emerald-200 text-emerald-700 font-medium' }
 };
 
 const celebrations = [
@@ -192,11 +193,11 @@ const celebrations = [
 ];
 
 const ranks = [
-  { threshold: 0, title: 'Cozy Start', emoji: '🌱', desc: "Every good day begins gently. Pick one small thing whenever you're ready." },
-  { threshold: 1, title: 'Warming Up', emoji: '☕', desc: "You've set your rhythm in motion! Keep going at your own comfortable pace." },
-  { threshold: 50, title: 'Steady Flow', emoji: '🌻', desc: "Halfway through today's list! You're balancing things wonderfully." },
-  { threshold: 80, title: 'Radiant Momentum', emoji: '✨', desc: 'Almost everything wrapped up — what a thoughtful, productive day.' },
-  { threshold: 100, title: 'Day Complete', emoji: '👑', desc: 'All done! Relax your shoulders and enjoy your evening.' }
+  { threshold: 0, title: 'Cozy Start', icon: 'sprout', desc: "Every good day begins gently. Pick one small thing whenever you're ready." },
+  { threshold: 1, title: 'Warming Up', icon: 'coffee', desc: "You've set your rhythm in motion! Keep going at your own comfortable pace." },
+  { threshold: 50, title: 'Steady Flow', icon: 'flower-2', desc: "Halfway through today's list! You're balancing things wonderfully." },
+  { threshold: 80, title: 'Radiant Momentum', icon: 'sparkles', desc: 'Almost everything wrapped up — what a thoughtful, productive day.' },
+  { threshold: 100, title: 'Day Complete', icon: 'crown', desc: 'All done! Relax your shoulders and enjoy your evening.' }
 ];
 
 const REMINDER_LEAD_MIN = 15;
@@ -293,7 +294,7 @@ function workOutsideHours(task) {
 
 function setHoursHint(hintEl, { date, time, duration, category, guests, source }) {
   const reason = workOutsideHours({ date, time, duration, category, attendees: guests, source });
-  hintEl.textContent = reason ? `🌙 Outside working hours (${workHoursLabel()}): ${reason}.` : '';
+  hintEl.textContent = reason ? `☾ Outside working hours (${workHoursLabel()}): ${reason}.` : '';
   hintEl.classList.toggle('hidden', !reason);
 }
 
@@ -1039,10 +1040,16 @@ function openOutlookWebCompose() {
 function updateDashboard() {
   const hr = zonedParts(new Date()).hour;
   let greeting = 'Good morning';
-  let icon = '☀️';
-  if (hr >= 12 && hr < 17) { greeting = 'Good afternoon'; icon = '🌤️'; }
-  else if (hr >= 17 || hr < 4) { greeting = 'Good evening'; icon = '🌙'; }
-  $('view-greeting').textContent = `${greeting}, ${userName} ${icon}`;
+  if (hr >= 12 && hr < 17) greeting = 'Good afternoon';
+  else if (hr >= 17 || hr < 4) greeting = 'Good evening';
+  // "Good morning, Jimmy" with a hand-drawn underline under the name
+  const h1 = $('view-greeting');
+  h1.innerHTML = '';
+  h1.appendChild(document.createTextNode(`${greeting}, `));
+  const name = el('span', 'name-squiggle', userName);
+  name.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 200 14" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9 C 30 2, 55 13, 85 7 S 140 2, 170 8 S 192 10, 198 5" fill="none" stroke="#1F9488" stroke-width="3.2" stroke-linecap="round"/></svg>');
+  h1.appendChild(name);
+  $('hero-date').textContent = parseYMD(todayYMD()).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   $('header-date').textContent = parseYMD(todayYMD()).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) + ` · ${PLANNER_TZ.split('/').pop().replace(/_/g, ' ')} time`;
 
   const today = todayYMD();
@@ -1071,7 +1078,10 @@ function updateDashboard() {
       break;
     }
   }
-  $('rank-emoji').textContent = currentRank.emoji;
+  if ($('rank-emoji').dataset.icon !== currentRank.icon) {
+    $('rank-emoji').dataset.icon = currentRank.icon;
+    setIcon($('rank-emoji'), currentRank.icon);
+  }
   $('rank-text').textContent = currentRank.title;
   // The progress message moves to the badge tooltip; the banner shows the quote of the day instead
   $('rank-badge').title = currentRank.desc;
@@ -1091,12 +1101,35 @@ function renderDailyQuote() {
   $('quote-occasion').classList.toggle('hidden', !q.occasion);
 }
 
-function tag(text, classes) {
-  return el('span', `inline-flex items-center px-2 py-0.5 rounded-lg border font-semibold ${classes}`, text);
+// Line icons from Lucide (loaded in index.html); <i data-lucide> placeholders become SVGs in refreshIcons()
+function icon(name, className = '') {
+  const i = document.createElement('i');
+  i.setAttribute('data-lucide', name);
+  if (className) i.setAttribute('class', className);
+  return i;
 }
 
-function iconButton(label, title, classes, onClick) {
-  const btn = el('button', `h-8 min-w-8 px-2 rounded-lg text-xs font-semibold border transition-colors flex items-center justify-center ${classes}`, label);
+function refreshIcons() {
+  if (window.lucide && lucide.createIcons) lucide.createIcons({ attrs: { 'stroke-width': 1.85 } });
+}
+
+function setIcon(container, name) {
+  container.innerHTML = '';
+  container.appendChild(icon(name));
+  refreshIcons();
+}
+
+function tag(text, classes, iconName) {
+  const t = el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border font-semibold ${classes}`);
+  if (iconName) t.appendChild(icon(iconName));
+  if (text) t.appendChild(document.createTextNode(text));
+  return t;
+}
+
+function iconButton(iconName, title, classes, onClick, text) {
+  const btn = el('button', `h-8 min-w-8 px-2 rounded-lg text-sm font-semibold border transition-colors flex items-center justify-center gap-1 ${classes}`);
+  btn.appendChild(icon(iconName));
+  if (text) btn.appendChild(el('span', 'text-xs', text));
   btn.type = 'button';
   btn.title = title;
   btn.setAttribute('aria-label', title);
@@ -1138,8 +1171,9 @@ function renderDayView() {
   emptyState.classList.toggle('hidden', dayTasks.length > 0);
 
   dayTasks.forEach(task => {
-    const li = el('li', 'rise-in group flex flex-wrap sm:flex-nowrap items-start gap-3 p-4 bg-[#FAF8F5] hover:bg-[#F5EFE6] rounded-2xl border border-[#EFE8DC] transition-colors');
-    if (task.source === 'outlook') li.classList.add('border-l-4', 'border-l-sky-400');
+    const li = el('li', 'rise-in cat-stripe group flex flex-wrap sm:flex-nowrap items-start gap-3 p-4 pl-5 bg-[#FBF6EC] hover:bg-[#F1E6D0] rounded-2xl border border-[#E3D3B5] transition-colors');
+    // Coloured stripe on the left: the life area (imported Outlook meetings are lapis)
+    li.style.setProperty('--stripe', task.source === 'outlook' ? '#5B7FC4' : CATEGORIES[task.category].stripe);
 
     const checkBtn = el('button', `w-6 h-6 mt-0.5 shrink-0 rounded-lg border flex items-center justify-center text-sm transition-all ${
       task.completed ? 'bg-emerald-500 border-emerald-600 text-white' : 'border-stone-300 bg-white hover:border-amber-500 text-transparent'
@@ -1154,27 +1188,27 @@ function renderDayView() {
     const title = el('p', `text-sm font-semibold break-words ${task.completed ? 'line-through text-stone-400' : 'text-stone-800'}`, task.text);
 
     const meta = el('div', 'flex items-center gap-1.5 mt-1.5 flex-wrap text-[11px]');
-    meta.appendChild(tag(`⏰ ${formatTime12(task.time)}`, 'bg-white text-stone-600 border-stone-200/80 font-medium'));
+    meta.appendChild(tag(formatTime12(task.time), 'bg-white text-stone-600 border-stone-200/80 font-medium', 'clock'));
     if (task.source === 'outlook') {
-      meta.appendChild(tag('📧 Outlook event', 'bg-sky-50 text-sky-800 border-sky-200'));
+      meta.appendChild(tag('Outlook event', 'bg-sky-50 text-sky-800 border-sky-200', 'mail'));
     } else {
-      meta.appendChild(tag(CATEGORIES[task.category].label, CATEGORIES[task.category].tag));
-      meta.appendChild(tag(PRIORITIES[task.priority].label, PRIORITIES[task.priority].tag));
-      if (task.outlookEventId) meta.appendChild(tag('☁️ On calendar', 'bg-sky-50 text-sky-800 border-sky-200'));
+      meta.appendChild(tag(CATEGORIES[task.category].label, CATEGORIES[task.category].tag, CATEGORIES[task.category].icon));
+      meta.appendChild(tag(PRIORITIES[task.priority].label, PRIORITIES[task.priority].tag, PRIORITIES[task.priority].icon));
+      if (task.outlookEventId) meta.appendChild(tag('On calendar', 'bg-sky-50 text-sky-800 border-sky-200', 'calendar-check'));
     }
     if (task.attendees.length) {
       const guests = tag(`👥 ${task.attendees.length}`, 'bg-sky-50 text-sky-800 border-sky-200');
       guests.title = task.attendees.join(', ');
       meta.appendChild(guests);
     }
-    if (task.needsSync) meta.appendChild(tag('⏳ Edit not in Outlook yet', 'bg-amber-50 text-amber-800 border-amber-200'));
-    if (task.reminder) meta.appendChild(tag('🔔', 'bg-purple-50 text-purple-700 border-purple-200'));
-    if (task.seriesId) meta.appendChild(tag('🔁', 'bg-stone-100 text-stone-600 border-stone-200'));
+    if (task.needsSync) meta.appendChild(tag('Edit not in Outlook yet', 'bg-amber-50 text-amber-800 border-amber-200', 'hourglass'));
+    if (task.reminder) meta.appendChild(tag('', 'bg-rose-50 text-rose-700 border-rose-200', 'bell'));
+    if (task.seriesId) meta.appendChild(tag('', 'bg-stone-100 text-stone-600 border-stone-200', 'repeat'));
     if (task.subtasks.length) {
-      meta.appendChild(tag(`☑️ ${task.subtasks.filter(st => st.done).length}/${task.subtasks.length}`, 'bg-emerald-50 text-emerald-800 border-emerald-200'));
+      meta.appendChild(tag(`${task.subtasks.filter(st => st.done).length}/${task.subtasks.length}`, 'bg-emerald-50 text-emerald-800 border-emerald-200', 'list-checks'));
     }
     if (task.date !== selectedDate) {
-      meta.appendChild(tag(`📅 ${parseYMD(task.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, 'bg-stone-200 text-stone-700 border-stone-300'));
+      meta.appendChild(tag(parseYMD(task.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 'bg-stone-200 text-stone-700 border-stone-300', 'calendar'));
     }
 
     body.appendChild(title);
@@ -1224,17 +1258,18 @@ function renderDayView() {
     }
 
     const actions = el('div', 'flex items-center gap-1 shrink-0 w-full sm:w-auto justify-end');
-    actions.appendChild(iconButton('＋ Step', 'Break into smaller steps', 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:text-amber-900', () => {
+    actions.appendChild(iconButton('list-plus', 'Break into smaller steps', 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:text-amber-900', () => {
       openSubtaskInputTaskId = openSubtaskInputTaskId === task.id ? null : task.id;
       renderDayView();
-    }));
+      refreshIcons();
+    }, 'Step'));
     if (!task.completed) {
-      actions.appendChild(iconButton('▶', 'Start a focus session on this', 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100', () => selectTaskForFocus(task)));
+      actions.appendChild(iconButton('play', 'Start a focus session on this', 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100', () => selectTaskForFocus(task)));
     }
     if (task.webLink) {
-      actions.appendChild(iconButton('↗', 'Open in Outlook', 'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100', () => window.open(task.webLink, '_blank', 'noopener')));
+      actions.appendChild(iconButton('external-link', 'Open in Outlook', 'bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100', () => window.open(task.webLink, '_blank', 'noopener')));
     } else if (task.source === 'sunbeam') {
-      actions.appendChild(iconButton('📅', Outlook.connected ? 'Add to Outlook calendar' : 'Open in Outlook calendar', 'bg-white text-sky-700 border-sky-200 hover:bg-sky-50', async () => {
+      actions.appendChild(iconButton('calendar-plus', Outlook.connected ? 'Add to Outlook calendar' : 'Open in Outlook calendar', 'bg-white text-sky-700 border-sky-200 hover:bg-sky-50', async () => {
         if (Outlook.connected) {
           if (await pushTaskToOutlook(task)) showToast(`"${task.text}" is on your Outlook calendar.`, '☁️', 'Outlook');
         } else {
@@ -1243,9 +1278,9 @@ function renderDayView() {
       }));
     }
     if (canEdit(task)) {
-      actions.appendChild(iconButton('✎', 'Edit time, details and guests', 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:text-amber-900', () => openEditDialog(task.id)));
+      actions.appendChild(iconButton('pencil', 'Edit time, details and guests', 'bg-white text-stone-600 border-stone-200 hover:bg-amber-50 hover:text-amber-900', () => openEditDialog(task.id)));
     }
-    actions.appendChild(iconButton('✕', 'Delete plan', 'bg-white text-stone-400 border-stone-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200', () => deleteTask(task.id)));
+    actions.appendChild(iconButton('x', 'Delete plan', 'bg-white text-stone-400 border-stone-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200', () => deleteTask(task.id)));
 
     li.appendChild(checkBtn);
     li.appendChild(body);
@@ -1315,9 +1350,10 @@ function renderWeekView() {
     }
     dayTasks.forEach(task => {
       // A div (not a button) so the ✎ edit button can sit inside it
-      const card = el('div', `week-task-card w-full text-left p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
-        task.completed ? 'bg-stone-50 border-stone-200 opacity-60' : 'bg-[#FAF8F5] hover:border-amber-300 border-[#EFE8DC]'
-      } ${task.source === 'outlook' ? 'border-l-4 border-l-sky-400' : ''}`);
+      const card = el('div', `week-task-card cat-stripe w-full text-left p-2 pl-3 rounded-xl border text-xs transition-colors cursor-pointer ${
+        task.completed ? 'bg-stone-50 border-stone-200 opacity-60' : 'bg-[#FBF6EC] hover:border-amber-300 border-[#E3D3B5]'
+      }`);
+      card.style.setProperty('--stripe', task.source === 'outlook' ? '#5B7FC4' : CATEGORIES[task.category].stripe);
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
       card.title = task.completed ? 'Mark as not done' : 'Mark as done';
@@ -1336,14 +1372,16 @@ function renderWeekView() {
       if (task.attendees.length) time.appendChild(el('span', 'text-sky-700', `· 👥${task.attendees.length}`));
       const offHours = workOutsideHours(task);
       if (offHours) {
-        const moon = el('span', 'text-indigo-500', '🌙');
+        const moon = el('span', 'text-indigo-500 flex');
+        moon.appendChild(icon('moon-star'));
         moon.title = `Outside working hours: ${offHours}`;
         time.appendChild(moon);
       }
       top.appendChild(time);
       const right = el('span', 'flex items-center gap-1');
       if (canEdit(task)) {
-        const edit = el('button', 'w-5 h-5 rounded text-[11px] text-stone-400 hover:text-amber-800 hover:bg-amber-100', '✎');
+        const edit = el('button', 'w-5 h-5 rounded text-[11px] text-stone-400 hover:text-amber-800 hover:bg-amber-100 flex items-center justify-center');
+        edit.appendChild(icon('pencil'));
         edit.type = 'button';
         edit.title = 'Edit';
         edit.setAttribute('aria-label', `Edit ${task.text}`);
@@ -1393,8 +1431,8 @@ function renderMonthView() {
     const doneCount = dayTasks.filter(t => t.completed).length;
     const allDone = dayTasks.length > 0 && doneCount === dayTasks.length;
 
-    const cell = el('button', `${cellBase} text-left transition-colors ${isWorkDay(dateStr) ? 'bg-white' : 'bg-[#F7F2EA] weekend-cell'} ${
-      isToday ? 'border-amber-500 ring-2 ring-amber-200' : 'border-[#EFE8DC] hover:border-amber-300 hover:bg-amber-50/30'
+    const cell = el('button', `${cellBase} text-left transition-colors ${isWorkDay(dateStr) ? 'bg-white' : 'bg-[#EFE3CB] weekend-cell'} ${
+      isToday ? 'border-amber-500 ring-2 ring-amber-200' : 'border-[#E3D3B5] hover:border-amber-300 hover:bg-amber-50/30'
     }`);
     cell.type = 'button';
     cell.setAttribute('aria-label', `${parseYMD(dateStr).toDateString()}, ${dayTasks.length} plans`);
@@ -1481,19 +1519,19 @@ function renderAnalysisView() {
   const meetings = tasks.filter(t => t.source === 'outlook' && weekDates.includes(t.date)).length;
   const insights = [
     {
-      icon: '🌻', title: 'Your rhythm', bg: 'bg-amber-50/90 text-amber-950 border-amber-200',
+      icon: 'sun', title: 'Your rhythm', bg: 'bg-amber-50/90 text-amber-950 border-amber-200',
       desc: velocity >= 60
         ? `You've wrapped up ${velocity}% of your plans. Pause and notice how far you've come.`
         : `You're at ${velocity}% overall. Pick one gentle priority to build momentum.`
     },
     {
-      icon: '💛', title: 'Life balance', bg: 'bg-rose-50/80 text-rose-950 border-rose-200',
+      icon: 'scale', title: 'Life balance', bg: 'bg-rose-50/80 text-rose-950 border-rose-200',
       desc: topCat
         ? `Most plans are in ${topCat} (${counts[topCat]}). Leave a little room for rest and self-care.`
         : 'Add a few plans to see how your time is spread.'
     },
     {
-      icon: '📧', title: 'Outlook', bg: 'bg-sky-50/80 text-sky-950 border-sky-200',
+      icon: 'mail', title: 'Outlook', bg: 'bg-sky-50/80 text-sky-950 border-sky-200',
       desc: Outlook.connected
         ? `Linked to ${Outlook.account.username}. ${meetings} Outlook ${meetings === 1 ? 'meeting' : 'meetings'} in the shown week.`
         : 'Connect Outlook to see your meetings next to your plans.'
@@ -1503,7 +1541,9 @@ function renderAnalysisView() {
   container.innerHTML = '';
   insights.forEach(item => {
     const card = el('div', `p-3.5 rounded-2xl border text-xs flex items-start gap-3 ${item.bg}`);
-    card.appendChild(el('span', 'text-xl leading-none', item.icon));
+    const ic = el('span', 'text-xl leading-none flex mt-0.5');
+    ic.appendChild(icon(item.icon));
+    card.appendChild(ic);
     const text = el('div');
     text.appendChild(el('p', 'font-bold text-sm mb-0.5', item.title));
     text.appendChild(el('p', 'leading-relaxed opacity-90', item.desc));
@@ -1540,7 +1580,9 @@ function renderRemindersView() {
     const li = el('li', `p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 bg-white ${soon ? 'border-amber-300 shadow-xs' : 'border-stone-200'}`);
 
     const left = el('div', 'flex items-center gap-3 min-w-0 flex-1');
-    left.appendChild(el('div', `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${soon ? 'bg-amber-100' : 'bg-stone-100'}`, '🔔'));
+    const bell = el('div', `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-lg ${soon ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-500'}`);
+    bell.appendChild(icon('bell'));
+    left.appendChild(bell);
     const details = el('div', 'min-w-0 flex-1');
     details.appendChild(el('p', 'text-sm font-bold text-stone-800 break-words', task.text));
     details.appendChild(el('p', 'text-xs text-stone-500 mt-0.5', `${parseYMD(task.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${formatTime12(task.time)} · ${relativeFromNow(start)}`));
@@ -1585,6 +1627,7 @@ function render() {
   updateFormHoursHint();
   ({ day: renderDayView, week: renderWeekView, month: renderMonthView, analysis: renderAnalysisView, reminders: renderRemindersView, outlook: renderOutlookView })[activeView]();
   saveState();
+  refreshIcons();
   ensureMonthsLoaded(visibleDates());
 }
 
@@ -1601,7 +1644,7 @@ function switchView(viewName) {
   navTabs.forEach(tab => {
     const on = tab.dataset.view === viewName;
     tab.classList.toggle('bg-white', on);
-    tab.classList.toggle('text-amber-900', on);
+    tab.classList.toggle('text-sky-800', on);
     tab.classList.toggle('shadow-sm', on);
     tab.classList.toggle('font-bold', on);
     tab.classList.toggle('text-stone-600', !on);
@@ -1980,7 +2023,7 @@ function clearFocusTask() {
   focusedTaskId = null;
   const lbl = $('focus-active-task-label');
   lbl.innerHTML = '';
-  lbl.appendChild(document.createTextNode('🎯 '));
+  lbl.appendChild(icon('target', 'inline-block align-[-2px] mr-1 text-rose-500'));
   lbl.appendChild(el('span', 'font-semibold text-stone-800', 'Any task (or press ▶ on a plan)'));
 }
 
@@ -1988,7 +2031,7 @@ function selectTaskForFocus(task) {
   focusedTaskId = task.id;
   const lbl = $('focus-active-task-label');
   lbl.innerHTML = '';
-  lbl.appendChild(document.createTextNode('🎯 '));
+  lbl.appendChild(icon('target', 'inline-block align-[-2px] mr-1 text-rose-500'));
   lbl.appendChild(el('span', 'font-bold text-amber-900', task.text));
   if (!focusEndsAt) {
     toggleFocusTimer();
@@ -2210,12 +2253,12 @@ function importFullJSONBackup(file) {
 // ==========================================
 function applyEveningThemeUI() {
   document.body.classList.toggle('evening-mode', isEveningMode);
-  $('theme-icon').textContent = isEveningMode ? '☀️' : '🌙';
+  setIcon($('theme-icon'), isEveningMode ? 'sun' : 'moon');
   $('theme-toggle-btn').title = isEveningMode ? 'Switch to Daylight Mode' : 'Switch to Evening Mode';
 }
 
 function applySoundUI() {
-  $('sound-icon').textContent = sounds.enabled ? '🔊' : '🔇';
+  setIcon($('sound-icon'), sounds.enabled ? 'volume-2' : 'volume-x');
   $('sound-toggle-btn').title = sounds.enabled ? 'Mute sounds' : 'Turn sounds on';
   $('sound-toggle-btn').setAttribute('aria-pressed', sounds.enabled ? 'true' : 'false');
   $('sound-toggle-btn').classList.toggle('opacity-60', !sounds.enabled);
@@ -2224,7 +2267,7 @@ function applySoundUI() {
 function applyMoodUI() {
   moodBtns.forEach(btn => {
     const on = btn.dataset.mood === userMood;
-    btn.className = `mood-btn px-2 py-1 rounded-lg transition-all ${on ? 'bg-amber-100 font-bold text-amber-900' : 'text-stone-600 hover:bg-amber-50'}`;
+    btn.className = `mood-btn px-2 py-1 rounded-lg transition-all inline-flex items-center gap-1 ${on ? 'bg-emerald-100 font-bold text-emerald-800' : 'text-stone-600 hover:bg-amber-50'}`;
     btn.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
@@ -2233,7 +2276,7 @@ function applyPriorityUI() {
   priorityChips.forEach(chip => {
     const p = chip.dataset.priority;
     const on = p === selectedPriority;
-    chip.className = `priority-chip h-8 rounded-lg border text-xs transition-all ${on ? PRIORITIES[p].chipOn : PRIORITIES[p].chipOff}`;
+    chip.className = `priority-chip h-8 rounded-lg border text-xs transition-all inline-flex items-center justify-center gap-1 ${on ? PRIORITIES[p].chipOn : PRIORITIES[p].chipOff}`;
     chip.setAttribute('aria-checked', on ? 'true' : 'false');
   });
 }
