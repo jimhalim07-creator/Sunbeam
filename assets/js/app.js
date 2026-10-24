@@ -213,14 +213,14 @@ let currentWeekOffset = 0;
 let currentMonthYear = monthOf(todayYMD());
 let lastKnownToday = todayYMD();
 
-let userName = 'friend';
+let userName = '';
+let settingsSavedAt = 0;      // when settings/local plans last changed (ms), to merge with the Outlook backup
 let userMood = 'steady';
 let dailyIntention = '';
 let outlookEmail = '';
 let msClientIdOverride = '';
 let msTenantOverride = '';
 let autoSyncDefault = true;
-let autoPullOnStart = false;
 let emailScope = 'day';
 let isEveningMode = false;
 let hiddenOutlookIds = [];
@@ -264,7 +264,9 @@ function normalizeTask(t) {
     isOrganizer: t.source === 'outlook' ? !!t.isOrganizer : true,
     // Edits made while signed out, waiting to be sent to Outlook
     needsSync: !!t.needsSync,
-    needsAttendeeSync: !!t.needsAttendeeSync
+    needsAttendeeSync: !!t.needsAttendeeSync,
+    // You unticked "Add to my Outlook calendar" for this plan
+    keepLocal: !!t.keepLocal
   };
 }
 
@@ -310,64 +312,68 @@ function canEdit(task) {
   return task.source === 'sunbeam' || task.isOrganizer;
 }
 
-function seedTasks() {
-  const today = todayYMD();
-  return [
-    { text: 'Morning stretch & a glass of water', date: today, time: '08:00', category: 'Health', priority: 'medium', completed: true },
-    {
-      text: 'Focus block: wrap up main project priorities', date: today, time: '10:00', category: 'Work', priority: 'high', reminder: true,
-      subtasks: [
-        { text: 'Review key milestones', done: true },
-        { text: 'Draft summary update for team' },
-        { text: 'Send final check-in note' }
-      ]
-    },
-    { text: 'Reply to key emails & clear inbox', date: today, time: '14:00', category: 'Work', priority: 'medium', reminder: true },
-    { text: 'Pick up groceries & unwind for dinner', date: today, time: '18:00', category: 'Personal', priority: 'low' },
-    { text: 'Prepare weekly team notes', date: addDays(today, 1), time: '11:00', category: 'Work', priority: 'high', reminder: true },
-    { text: 'Read 20 pages of a favourite book', date: addDays(today, 2), time: '20:00', category: 'Learning', priority: 'low' },
-    { text: 'Catch-up call with family', date: addDays(today, 3), time: '17:30', category: 'Personal', priority: 'medium', reminder: true },
-    { text: 'Nature walk & coffee break', date: addDays(today, 4), time: '09:30', category: 'Health', priority: 'low' }
-  ].map(normalizeTask);
+// The old demo plans; removed from anyone's list on load so they never get pushed to Outlook
+const DEMO_PLAN_TEXTS = new Set([
+  'Morning stretch & a glass of water', 'Focus block: wrap up main project priorities', 'Reply to key emails & clear inbox',
+  'Pick up groceries & unwind for dinner', 'Prepare weekly team notes', 'Read 20 pages of a favourite book',
+  'Catch-up call with family', 'Nature walk & coffee break'
+]);
+
+function readStored(key, fallback, parse = false) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    return parse ? JSON.parse(raw) : raw;
+  } catch (e) {
+    return fallback;
+  }
 }
 
+// Each value is read on its own, so one damaged entry can never wipe out your plans
 function loadSavedState() {
-  try {
-    const savedTasks = localStorage.getItem('sunbeam_tasks_v1');
-    if (savedTasks) {
-      tasks = JSON.parse(savedTasks)
-        // Drop placeholder events the old "simulation mode" inserted
+  const raw = readStored('sunbeam_tasks_v1', null);
+  if (raw) {
+    try {
+      tasks = JSON.parse(raw)
         .filter(t => !String(t.id).startsWith('outlook-demo-') && !(String(t.id).startsWith('graph-') && !t.outlookEventId))
+        .filter(t => !(DEMO_PLAN_TEXTS.has(t.text) && !t.outlookEventId))
         .map(normalizeTask);
-    } else {
-      tasks = seedTasks();
+    } catch (e) {
+      // Keep the unreadable copy aside instead of overwriting it
+      try { localStorage.setItem(`sunbeam_tasks_unreadable_${Date.now()}`, raw); } catch (err) {}
+      tasks = [];
     }
-
-    userName = localStorage.getItem('sunbeam_user_name') || 'friend';
-    userMood = localStorage.getItem('sunbeam_user_mood') || 'steady';
-    outlookEmail = localStorage.getItem('sunbeam_outlook_email') || '';
-    msClientIdOverride = localStorage.getItem('sunbeam_ms_client_id') || '';
-    msTenantOverride = localStorage.getItem('sunbeam_ms_tenant') || '';
-    autoSyncDefault = localStorage.getItem('sunbeam_autosync') !== 'false';
-    autoPullOnStart = localStorage.getItem('sunbeam_autopull') === 'true';
-    emailScope = localStorage.getItem('sunbeam_email_scope') || 'day';
-    hiddenOutlookIds = JSON.parse(localStorage.getItem('sunbeam_hidden_outlook_ids') || '[]');
-    firedReminderKeys = JSON.parse(localStorage.getItem('sunbeam_fired_reminders') || '[]');
-
-    const savedTheme = localStorage.getItem('sunbeam_evening_mode');
-    isEveningMode = savedTheme === null
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : savedTheme === 'true';
-
-    // Intention and focus count are per day
-    const stamp = localStorage.getItem('sunbeam_day_stamp');
-    if (stamp === todayYMD()) {
-      dailyIntention = localStorage.getItem('sunbeam_daily_intention') || '';
-      focusSessionsCompleted = parseInt(localStorage.getItem('sunbeam_focus_sessions') || '0', 10) || 0;
-    }
-  } catch (e) {
-    tasks = seedTasks();
   }
+
+  const storedName = readStored('sunbeam_user_name', '');
+  userName = storedName && storedName !== 'friend' ? storedName : defaultName();
+  userMood = readStored('sunbeam_user_mood', 'steady');
+  outlookEmail = readStored('sunbeam_outlook_email', '');
+  msClientIdOverride = readStored('sunbeam_ms_client_id', '');
+  msTenantOverride = readStored('sunbeam_ms_tenant', '');
+  autoSyncDefault = readStored('sunbeam_autosync', 'true') !== 'false';
+  emailScope = readStored('sunbeam_email_scope', 'day');
+  hiddenOutlookIds = readStored('sunbeam_hidden_outlook_ids', [], true);
+  firedReminderKeys = readStored('sunbeam_fired_reminders', [], true);
+  if (!Array.isArray(hiddenOutlookIds)) hiddenOutlookIds = [];
+  if (!Array.isArray(firedReminderKeys)) firedReminderKeys = [];
+  settingsSavedAt = Number(readStored('sunbeam_settings_saved_at', '0')) || 0;
+
+  const savedTheme = readStored('sunbeam_evening_mode', null);
+  isEveningMode = savedTheme === null ? window.matchMedia('(prefers-color-scheme: dark)').matches : savedTheme === 'true';
+
+  // Intention and focus count are per day
+  if (readStored('sunbeam_day_stamp', '') === todayYMD()) {
+    dailyIntention = readStored('sunbeam_daily_intention', '');
+    focusSessionsCompleted = parseInt(readStored('sunbeam_focus_sessions', '0'), 10) || 0;
+  }
+}
+
+// Your first name: set in config.js, else from your Microsoft account
+function defaultName() {
+  if (CFG.ownerName) return CFG.ownerName;
+  const full = (Outlook.account && Outlook.account.name) || '';
+  return full.trim().split(/\s+/)[0] || 'there';
 }
 
 function saveState() {
@@ -380,7 +386,7 @@ function saveState() {
     localStorage.setItem('sunbeam_ms_client_id', msClientIdOverride);
     localStorage.setItem('sunbeam_ms_tenant', msTenantOverride);
     localStorage.setItem('sunbeam_autosync', autoSyncDefault ? 'true' : 'false');
-    localStorage.setItem('sunbeam_autopull', autoPullOnStart ? 'true' : 'false');
+    localStorage.setItem('sunbeam_settings_saved_at', String(settingsSavedAt));
     localStorage.setItem('sunbeam_email_scope', emailScope);
     localStorage.setItem('sunbeam_evening_mode', isEveningMode ? 'true' : 'false');
     localStorage.setItem('sunbeam_focus_sessions', String(focusSessionsCompleted));
@@ -388,6 +394,7 @@ function saveState() {
     localStorage.setItem('sunbeam_hidden_outlook_ids', JSON.stringify(hiddenOutlookIds.slice(-500)));
     localStorage.setItem('sunbeam_fired_reminders', JSON.stringify(firedReminderKeys.slice(-300)));
   } catch (e) {}
+  scheduleCloudSave();
 }
 
 function effectiveClientId() {
@@ -501,23 +508,26 @@ function outlookStatus() {
   if (!effectiveClientId()) return 'unconfigured';
   if (Outlook.initError) return 'error';
   if (!Outlook.connected) return 'ready';
+  if (Outlook.needsReconnect) return 'expired';
   return 'connected';
 }
 
 function refreshOutlookUI() {
   const status = outlookStatus();
   const connected = status === 'connected';
-  const user = connected ? Outlook.account.username : '';
+  const user = Outlook.account ? Outlook.account.username : '';
 
   const pillStyles = {
     connected: ['bg-emerald-100 text-emerald-900 border-emerald-300', `Connected · ${user}`],
+    expired: ['bg-amber-100 text-amber-900 border-amber-300', 'Sign-in expired'],
     ready: ['bg-sky-100 text-sky-900 border-sky-200', 'Ready to connect'],
     unconfigured: ['bg-amber-100 text-amber-900 border-amber-200', 'Setup needed'],
     file: ['bg-rose-100 text-rose-900 border-rose-200', 'Needs a web address'],
     error: ['bg-rose-100 text-rose-900 border-rose-200', 'Sign-in unavailable']
   };
   const descs = {
-    connected: 'New plans go straight onto your Outlook calendar, checking one off updates the event, and deleting it removes the event.',
+    connected: 'Sunbeam keeps your calendar and plans in step automatically: when you sign in, when you open it, and every 15 minutes. Your plans are backed up in Outlook, so signing in on any browser brings them back.',
+    expired: 'Microsoft asks you to sign in again about once a day. Your plans are safe; press Sign in again to pick up where you left off.',
     ready: 'Sign in with your Microsoft account to link your calendar and email.',
     unconfigured: 'Finish the one-time setup below to link Sunbeam to your Microsoft account.',
     file: 'Microsoft sign-in needs Sunbeam to be served from a web address (GitHub Pages or localhost), not opened as a file.',
@@ -530,7 +540,7 @@ function refreshOutlookUI() {
   $('graph-connection-desc').textContent = descs[status];
 
   const loginBtn = $('ms-graph-login-btn');
-  loginBtn.textContent = connected ? 'Sign out' : status === 'ready' ? 'Connect Microsoft account' : 'Open setup';
+  loginBtn.textContent = connected ? 'Sign out' : status === 'expired' ? 'Sign in again' : status === 'ready' ? 'Connect Microsoft account' : 'Open setup';
   loginBtn.className = connected
     ? 'h-10 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 text-xs font-bold rounded-xl transition-all'
     : 'h-10 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm';
@@ -551,12 +561,12 @@ function refreshOutlookUI() {
   if (status === 'unconfigured' || status === 'file') $('outlook-setup-details').open = true;
 
   // Header chip
-  $('header-outlook-dot').className = `w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : status === 'ready' ? 'bg-sky-500' : 'bg-stone-400'}`;
-  $('header-outlook-label').textContent = connected ? 'Outlook on' : 'Outlook off';
+  $('header-outlook-dot').className = `w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : status === 'expired' ? 'bg-amber-500 animate-pulse' : status === 'ready' ? 'bg-sky-500' : 'bg-stone-400'}`;
+  $('header-outlook-label').textContent = connected ? (outlookBusy ? 'Syncing…' : 'Outlook on') : status === 'expired' ? 'Sign in again' : 'Outlook off';
 
   // Quick card on day view
   const quick = $('quick-outlook-status');
-  quick.textContent = connected ? user : pillStyles[status][1];
+  quick.textContent = connected ? (outlookBusy ? 'Syncing…' : user) : pillStyles[status][1];
   quick.className = `text-[10px] px-2 py-0.5 rounded-full font-semibold truncate max-w-[60%] ${connected ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}`;
   $('quick-outlook-desc').textContent = connected
     ? 'Plans you add land on your Outlook calendar automatically.'
@@ -611,7 +621,7 @@ async function connectOrDisconnectOutlook() {
     refreshOutlookUI();
     return;
   }
-  if (status !== 'ready') {
+  if (status !== 'ready' && status !== 'expired') {
     switchView('outlook');
     $('outlook-setup-details').open = true;
     $('ms-client-id-input').focus();
@@ -621,9 +631,10 @@ async function connectOrDisconnectOutlook() {
     const account = await Outlook.signIn();
     appendSyncLog(`Signed in as ${account.username}`);
     sounds.playComplete();
-    showToast(`Connected to Outlook as ${account.username}`, '🔐', 'Outlook');
+    showToast(`Welcome back, ${userName}! Bringing in your calendar…`, '🔐', 'Outlook');
     refreshOutlookUI();
     render();
+    await syncWithOutlook({ quiet: false });
   } catch (err) {
     appendSyncLog(`Sign-in failed: ${describeGraphError(err)}`, true);
     showToast(describeGraphError(err), '⚠️', 'Outlook');
@@ -650,6 +661,7 @@ async function pushTaskToOutlook(task, { quiet = false, attendeesChanged = false
     }
     task.needsSync = false;
     task.needsAttendeeSync = false;
+    task.keepLocal = false;
     saveState();
     if (!quiet) render();
     return true;
@@ -658,6 +670,10 @@ async function pushTaskToOutlook(task, { quiet = false, attendeesChanged = false
       // The event was deleted in Outlook; forget the link so it can be re-added.
       task.outlookEventId = null;
       task.webLink = null;
+      saveState();
+    } else if (err.reconnect && task.outlookEventId) {
+      // Try again after you sign in again
+      task.needsSync = true;
       saveState();
     }
     appendSyncLog(`Couldn't sync "${task.text}": ${describeGraphError(err)}`, true);
@@ -684,78 +700,257 @@ async function pushUnsyncedTasks() {
 
 // Open plans not on the calendar yet, plus any edits made while signed out
 function needsPush(t) {
-  return t.needsSync || (t.source === 'sunbeam' && !t.outlookEventId && !t.completed);
+  return t.needsSync || (t.source === 'sunbeam' && !t.outlookEventId && !t.completed && !t.keepLocal);
 }
 
-async function pullOutlookEvents({ quiet = false } = {}) {
-  if (!Outlook.connected) return;
+// ---------- Reading your calendar ----------
+// Outlook is the long-term memory: plans made in Sunbeam carry their details inside the event,
+// so after a browser wipe, signing in brings everything back.
+const loadedMonths = new Set();   // "YYYY-MM" ranges fetched this session
+let lastFullSyncAt = 0;
+
+function stripDone(subject) {
+  return String(subject || '').replace(/^✓\s*/, '');
+}
+
+function eventFields(ev) {
+  const startDt = fromGraphUtc(ev.start.dateTime);
+  const endDt = fromGraphUtc(ev.end.dateTime);
+  return {
+    text: stripDone(ev.subject) || '(No title)',
+    date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : zonedParts(startDt).ymd,
+    time: ev.isAllDay ? '' : zonedParts(startDt).hm,
+    duration: Math.max(15, Math.round((endDt - startDt) / 60000)),
+    webLink: ev.webLink || null,
+    isOrganizer: !!ev.isOrganizer,
+    attendees: (ev.attendees || []).map(a => (a.emailAddress && a.emailAddress.address || '').toLowerCase()).filter(Boolean)
+  };
+}
+
+// Apply stored Sunbeam details, keeping step ids stable where the text matches
+function applyMeta(task, meta) {
+  if (!meta) return;
+  if (CATEGORIES[meta.category]) task.category = meta.category;
+  if (PRIORITIES[meta.priority]) task.priority = meta.priority;
+  if (typeof meta.completed === 'boolean') task.completed = meta.completed;
+  if (typeof meta.reminder === 'boolean') task.reminder = meta.reminder;
+  if (meta.seriesId) task.seriesId = meta.seriesId;
+  if (Array.isArray(meta.subtasks)) {
+    task.subtasks = meta.subtasks.map(st => {
+      const same = task.subtasks.find(x => x.text === st.text);
+      return { id: same ? same.id : uid(), text: String(st.text || ''), done: !!st.done };
+    }).filter(st => st.text);
+  }
+}
+
+// Fetch Outlook events between two dates (YYYY-MM-DD, end exclusive) and merge them in
+async function pullOutlookRange(startYmd, endYmd) {
+  const events = await Outlook.listEvents(zonedToDate(startYmd, '00:00'), zonedToDate(endYmd, '00:00'));
+  const seen = new Set();
+  let added = 0, updated = 0;
+
+  events.forEach(ev => {
+    if (ev.isCancelled || hiddenOutlookIds.includes(ev.id)) return;
+    seen.add(ev.id);
+    const fields = eventFields(ev);
+    const ours = !!ev.sunbeam || (Array.isArray(ev.categories) && ev.categories.includes('Sunbeam'));
+    // Details for meetings with guests (and imported meetings) live in the settings backup
+    const meta = cloudMeetingMeta[ev.id] || ev.sunbeam;
+    const existing = tasks.find(t => t.outlookEventId === ev.id);
+
+    if (existing) {
+      if (existing.needsSync) return; // your unsent edit wins; it gets pushed
+      const before = JSON.stringify([existing.text, existing.date, existing.time, existing.duration, existing.attendees]);
+      Object.assign(existing, fields);
+      // Details from Outlook only fill in once per session, so ticks you make now aren't undone
+      if (meta && !metaAppliedThisSession.has(ev.id)) applyMeta(existing, meta);
+      metaAppliedThisSession.add(ev.id);
+      if (before !== JSON.stringify([existing.text, existing.date, existing.time, existing.duration, existing.attendees])) updated++;
+      return;
+    }
+
+    const task = normalizeTask({
+      ...fields,
+      id: uid(),
+      source: ours ? 'sunbeam' : 'outlook',
+      outlookEventId: ev.id,
+      category: 'Work',
+      priority: 'medium',
+      reminder: !!ev.isReminderOn,
+      completed: ours && /^✓/.test(ev.subject || '')
+    });
+    task.isOrganizer = ours ? true : !!ev.isOrganizer;
+    applyMeta(task, meta);
+    metaAppliedThisSession.add(ev.id);
+    tasks.push(task);
+    added++;
+  });
+
+  // Anything linked to Outlook in this range that's gone was deleted or cancelled in Outlook
+  const before = tasks.length;
+  tasks = tasks.filter(t => !(t.outlookEventId && !t.needsSync && t.date >= startYmd && t.date < endYmd && !seen.has(t.outlookEventId)));
+  return { added, updated, removed: before - tasks.length };
+}
+
+function monthRange(year, month) {
+  const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  return [start, formatYMD(new Date(year, month + 1, 1))];
+}
+
+// Full sync: settings backup first, then last month through two months ahead
+async function syncWithOutlook({ quiet = true } = {}) {
+  if (!Outlook.connected || outlookBusy) return;
   await withOutlookBusy(async () => {
-    const startYmd = addDays(todayYMD(), -1);
-    const endYmd = addDays(startYmd, 31);
-    const start = zonedToDate(startYmd, '00:00');
-    const end = zonedToDate(endYmd, '00:00');
-
     try {
-      const events = await Outlook.listEvents(start, end);
-      const ownEventIds = new Set(tasks.filter(t => t.source === 'sunbeam' && t.outlookEventId).map(t => t.outlookEventId));
-      const seen = new Set();
-      let added = 0;
-      let updated = 0;
-
-      events.forEach(ev => {
-        if (ev.isCancelled || ownEventIds.has(ev.id) || hiddenOutlookIds.includes(ev.id)) return;
-        if (Array.isArray(ev.categories) && ev.categories.includes('Sunbeam')) return;
-        seen.add(ev.id);
-
-        const startDt = fromGraphUtc(ev.start.dateTime);
-        const endDt = fromGraphUtc(ev.end.dateTime);
-        const fields = {
-          text: ev.subject || '(No title)',
-          date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : zonedParts(startDt).ymd,
-          time: ev.isAllDay ? '' : zonedParts(startDt).hm,
-          duration: Math.max(15, Math.round((endDt - startDt) / 60000)),
-          webLink: ev.webLink || null,
-          isOrganizer: !!ev.isOrganizer,
-          attendees: (ev.attendees || []).map(a => (a.emailAddress && a.emailAddress.address || '').toLowerCase()).filter(Boolean)
-        };
-
-        const existing = tasks.find(t => t.source === 'outlook' && t.outlookEventId === ev.id);
-        if (existing && existing.needsSync) {
-          // Don't overwrite an edit you made while signed out; it gets pushed instead
-        } else if (existing) {
-          if (existing.text !== fields.text || existing.date !== fields.date || existing.time !== fields.time) updated++;
-          Object.assign(existing, fields);
-        } else {
-          tasks.push(normalizeTask({
-            ...fields,
-            id: uid(),
-            source: 'outlook',
-            outlookEventId: ev.id,
-            category: 'Work',
-            priority: 'medium',
-            reminder: !!ev.isReminderOn
-          }));
-          added++;
-        }
-      });
-
-      // Meetings removed from Outlook disappear here too (unless you already checked them off)
-      const before = tasks.length;
-      tasks = tasks.filter(t => !(t.source === 'outlook' && !t.completed && t.date >= startYmd && t.date < endYmd && !seen.has(t.outlookEventId)));
-      const removed = before - tasks.length;
-
+      await loadCloudSettings();
+      const now = monthOf(todayYMD());
+      const totals = { added: 0, updated: 0, removed: 0 };
+      for (const d of [-1, 0, 1, 2]) {
+        const m = new Date(now.year, now.month + d, 1);
+        const [a, b] = monthRange(m.getFullYear(), m.getMonth());
+        const r = await pullOutlookRange(a, b);
+        loadedMonths.add(a.slice(0, 7));
+        totals.added += r.added;
+        totals.updated += r.updated;
+        totals.removed += r.removed;
+      }
+      lastFullSyncAt = Date.now();
       saveState();
       render();
-      appendSyncLog(`Imported from Outlook: ${added} new, ${updated} updated, ${removed} removed.`);
+      appendSyncLog(`Synced with Outlook: ${totals.added} new, ${totals.updated} changed, ${totals.removed} removed.`);
       if (!quiet) {
         sounds.playAdd();
-        showToast(`Outlook events refreshed: ${added} new, ${updated} updated.`, '📥', 'Outlook');
+        showToast(`Calendar synced: ${totals.added} new, ${totals.updated} changed.`, '📥', 'Outlook');
       }
+      // Plans edited or created while signed out go up now
+      const pending = tasks.filter(t => t.needsSync || (autoSyncDefault && needsPush(t)));
+      for (const t of pending) await pushTaskToOutlook(t, { quiet: true });
+      if (pending.length) render();
     } catch (err) {
-      appendSyncLog(`Import failed: ${describeGraphError(err)}`, true);
-      if (!quiet) showToast(describeGraphError(err), '⚠️', 'Outlook');
+      appendSyncLog(`Sync failed: ${describeGraphError(err)}`, true);
+      if (!quiet || err.reconnect) showToast(describeGraphError(err), err.reconnect ? '🔐' : '⚠️', 'Outlook');
     }
   });
+}
+
+// Make sure the month(s) you're looking at have been fetched from Outlook
+async function ensureMonthsLoaded(ymdList) {
+  if (!Outlook.connected || Outlook.needsReconnect || !cloudReady || outlookBusy) return;
+  const missing = [...new Set(ymdList.map(d => d.slice(0, 7)))].filter(m => !loadedMonths.has(m));
+  if (!missing.length) return;
+  missing.forEach(m => loadedMonths.add(m));
+  try {
+    for (const m of missing) {
+      const [y, mo] = m.split('-').map(Number);
+      const [a, b] = monthRange(y, mo - 1);
+      await pullOutlookRange(a, b);
+    }
+    saveState();
+    render();
+  } catch (err) {
+    missing.forEach(m => loadedMonths.delete(m));
+    appendSyncLog(`Couldn't load that month from Outlook: ${describeGraphError(err)}`, true);
+  }
+}
+
+// Kept for the "Import Outlook events" buttons
+function pullOutlookEvents({ quiet = false } = {}) {
+  return syncWithOutlook({ quiet });
+}
+
+// ---------- Settings backup on your calendar ----------
+// Holds what isn't inside an event: your name and preferences, plans not on the calendar,
+// done/steps for meetings with guests (changing those events would email the guests) and
+// hidden meetings.
+let cloudMeetingMeta = {};
+const metaAppliedThisSession = new Set();
+let deletedLocalIds = [];
+let cloudReady = false;          // don't upload until the backup has been read once
+let lastCloudJson = '';
+let cloudSaveTimer = null;
+const CLOUD_MAX_CHARS = 30000;
+
+function buildCloudSettings() {
+  const meetingMeta = {};
+  tasks
+    .filter(t => t.outlookEventId && (t.source === 'outlook' || t.attendees.length))
+    .slice(-300)
+    .forEach(t => { meetingMeta[t.outlookEventId] = planMeta(t); });
+  const data = {
+    v: 1,
+    userName, userMood, outlookEmail, emailScope, autoSyncDefault, isEveningMode,
+    hiddenOutlookIds: hiddenOutlookIds.slice(-300),
+    meetingMeta,
+    localPlans: tasks.filter(t => !t.outlookEventId && t.source === 'sunbeam').map(t => ({
+      id: t.id, text: t.text, date: t.date, time: t.time, duration: t.duration, category: t.category,
+      priority: t.priority, completed: t.completed, reminder: t.reminder, attendees: t.attendees, keepLocal: t.keepLocal,
+      subtasks: t.subtasks.map(st => ({ text: st.text, done: st.done }))
+    })),
+    deletedIds: deletedLocalIds.slice(-300)
+  };
+  // Stay within what Outlook will store: drop the oldest finished, then the oldest local plans
+  while (JSON.stringify(data).length > CLOUD_MAX_CHARS && data.localPlans.length) {
+    const doneIdx = data.localPlans.findIndex(p => p.completed);
+    data.localPlans.splice(doneIdx >= 0 ? doneIdx : 0, 1);
+  }
+  return data;
+}
+
+function scheduleCloudSave() {
+  if (!cloudReady || !Outlook.connected) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(saveCloudSettings, 2500);
+}
+
+async function saveCloudSettings() {
+  if (!cloudReady || !Outlook.connected || Outlook.needsReconnect) return;
+  const data = buildCloudSettings();
+  const json = JSON.stringify(data);
+  if (json === lastCloudJson) return;
+  settingsSavedAt = Date.now();
+  try {
+    await Outlook.saveSettings({ ...data, savedAt: settingsSavedAt });
+    lastCloudJson = json;
+    try { localStorage.setItem('sunbeam_settings_saved_at', String(settingsSavedAt)); } catch (e) {}
+  } catch (err) {
+    appendSyncLog(`Couldn't back up settings to Outlook: ${describeGraphError(err)}`, true);
+  }
+}
+
+async function loadCloudSettings() {
+  let remote = null;
+  try {
+    remote = await Outlook.loadSettings();
+  } catch (err) {
+    if (err.reconnect) throw err;
+    appendSyncLog(`Couldn't read the settings backup: ${describeGraphError(err)}`, true);
+  }
+  if (remote && remote.v === 1) {
+    cloudMeetingMeta = remote.meetingMeta || {};
+    if ((remote.savedAt || 0) > settingsSavedAt) {
+      if (remote.userName) userName = remote.userName;
+      if (remote.userMood) userMood = remote.userMood;
+      if (typeof remote.outlookEmail === 'string') outlookEmail = remote.outlookEmail;
+      if (remote.emailScope) emailScope = remote.emailScope;
+      if (typeof remote.autoSyncDefault === 'boolean') autoSyncDefault = remote.autoSyncDefault;
+      if (typeof remote.isEveningMode === 'boolean') isEveningMode = remote.isEveningMode;
+      settingsSavedAt = remote.savedAt;
+      applyEveningThemeUI();
+      applyMoodUI();
+      taskAutosyncCheck.checked = autoSyncDefault;
+    }
+    hiddenOutlookIds = [...new Set([...hiddenOutlookIds, ...(remote.hiddenOutlookIds || [])])];
+    deletedLocalIds = [...new Set([...deletedLocalIds, ...(remote.deletedIds || [])])];
+    // Plans that only live in Sunbeam: add any this browser doesn't have (and you didn't delete)
+    (remote.localPlans || []).forEach(p => {
+      if (tasks.some(t => t.id === p.id) || deletedLocalIds.includes(p.id)) return;
+      tasks.push(normalizeTask({ ...p, source: 'sunbeam' }));
+    });
+  }
+  // Remember what's in the cloud now, then allow uploads of later changes
+  lastCloudJson = remote ? JSON.stringify(buildCloudSettings()) : '';
+  cloudReady = true;
+  scheduleCloudSave();
 }
 
 // ---------- Email digest ----------
@@ -1374,7 +1569,9 @@ function renderOutlookView() {
     const on = btn.dataset.scope === emailScope;
     btn.className = `email-scope-btn h-9 rounded-xl text-xs font-bold border transition-colors ${on ? 'bg-sky-600 border-sky-600 text-white' : 'bg-white border-stone-200 text-stone-600 hover:bg-sky-50'}`;
   });
-  $('auto-pull-check').checked = autoPullOnStart;
+  $('last-sync-label').textContent = lastFullSyncAt
+    ? `Last synced ${new Date(lastFullSyncAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: PLANNER_TZ })}`
+    : 'Syncs as soon as you sign in';
   $('detected-redirect-uri').value = Outlook.redirectUri();
   const clientInput = $('ms-client-id-input');
   if (document.activeElement !== clientInput) clientInput.value = effectiveClientId();
@@ -1388,6 +1585,14 @@ function render() {
   updateFormHoursHint();
   ({ day: renderDayView, week: renderWeekView, month: renderMonthView, analysis: renderAnalysisView, reminders: renderRemindersView, outlook: renderOutlookView })[activeView]();
   saveState();
+  ensureMonthsLoaded(visibleDates());
+}
+
+// The dates on screen, so their months can be fetched from Outlook if needed
+function visibleDates() {
+  if (activeView === 'week') return getWeekDaysArray(currentWeekOffset).map(d => d.date);
+  if (activeView === 'month') return monthRange(currentMonthYear.year, currentMonthYear.month).slice(0, 1);
+  return [selectedDate];
 }
 
 function switchView(viewName) {
@@ -1442,7 +1647,8 @@ async function addTask() {
     reminder: taskReminderCheck.checked,
     subtasks: subtasks.map(st => ({ ...st, id: uid() })),
     seriesId,
-    attendees
+    attendees,
+    keepLocal: !taskAutosyncCheck.checked && !attendees.length
   }));
   tasks.push(...created);
 
@@ -1507,6 +1713,11 @@ function deleteTask(id) {
 // Clean-up after a task leaves the list: focus timer, hidden Outlook meetings, Outlook event removal.
 async function forgetTask(task) {
   if (focusedTaskId === task.id) clearFocusTask();
+  // So the Outlook backup doesn't bring back a plan you deleted
+  if (!task.outlookEventId) {
+    deletedLocalIds.push(task.id);
+    saveState();
+  }
   if (task.source === 'outlook') {
     // Never delete someone's real meeting; just hide it from Sunbeam
     hiddenOutlookIds.push(task.outlookEventId);
@@ -1535,6 +1746,15 @@ function clearCompleted() {
   done.forEach(forgetTask);
 }
 
+// Steps live inside the Outlook event; send changes a moment after you stop clicking.
+// Meetings with guests keep them in the settings backup instead (so guests get no update emails).
+const pushTimers = {};
+function schedulePush(task) {
+  if (!task.outlookEventId || task.source !== 'sunbeam' || task.attendees.length || !Outlook.connected) return;
+  clearTimeout(pushTimers[task.id]);
+  pushTimers[task.id] = setTimeout(() => pushTaskToOutlook(task, { quiet: true }), 1500);
+}
+
 function addSubtaskToTask(taskId, stepText) {
   const text = (stepText || '').trim();
   const task = tasks.find(t => t.id === taskId);
@@ -1542,6 +1762,7 @@ function addSubtaskToTask(taskId, stepText) {
   task.subtasks.push({ id: uid(), text, done: false });
   sounds.playAdd();
   render();
+  schedulePush(task);
 }
 
 function toggleSubtask(taskId, subId) {
@@ -1557,6 +1778,7 @@ function toggleSubtask(taskId, subId) {
   }
   st.done ? sounds.playAdd() : sounds.playTick();
   render();
+  schedulePush(task);
 }
 
 function deleteSubtask(taskId, subId) {
@@ -1565,6 +1787,7 @@ function deleteSubtask(taskId, subId) {
   task.subtasks = task.subtasks.filter(s => s.id !== subId);
   sounds.playDelete();
   render();
+  schedulePush(task);
 }
 
 function snoozeTask(id) {
@@ -2165,10 +2388,6 @@ $('quick-pull-outlook-btn').addEventListener('click', () => {
   else switchView('outlook');
 });
 
-$('auto-pull-check').addEventListener('change', e => {
-  autoPullOnStart = e.target.checked;
-  saveState();
-});
 
 $('outlook-email-input').addEventListener('change', e => {
   outlookEmail = e.target.value.trim();
@@ -2300,12 +2519,21 @@ $('search-all-dates-check').addEventListener('change', e => {
   $('daily-intention-input').value = dailyIntention;
   switchView('day');
 
+  // Ask the browser not to clear Sunbeam's storage when space runs low
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
   await initOutlook();
   render();
   if (Outlook.connected) {
     appendSyncLog(`Signed in as ${Outlook.account.username}`);
-    if (autoPullOnStart) pullOutlookEvents({ quiet: true });
+    syncWithOutlook({ quiet: true });
   }
+
+  // Keep in step with Outlook: every 15 minutes, and when you come back to the tab after 5+ minutes
+  setInterval(() => syncWithOutlook({ quiet: true }), 15 * 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastFullSyncAt > 5 * 60000) syncWithOutlook({ quiet: true });
+  });
 
   setInterval(reminderTick, 20000);
   reminderTick();

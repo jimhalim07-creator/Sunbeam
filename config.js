@@ -9,6 +9,9 @@ window.SUNBEAM_CONFIG = {
   // your organisation's endpoint. Using '/common' here fails with AADSTS50194.
   authority: 'https://login.microsoftonline.com/cef-eg.org',
 
+  // Your first name, used in greetings (you can still change it in the app with "Personalize")
+  ownerName: 'Jimmy',
+
   // All plan times are read in this time zone, whatever your computer's clock is set to.
   // Uses the IANA name, so Egypt's daylight-saving changes are handled automatically.
   timeZone: 'Africa/Cairo',

@@ -6,11 +6,20 @@
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const GRAPH_SCOPES = ['User.Read', 'Calendars.ReadWrite', 'Mail.Send'];
 
+// Sunbeam's own details (area, priority, steps, done…) are stored inside Outlook as hidden
+// "extended properties", so signing in on a fresh browser rebuilds everything. Only this app
+// reads them; guests and Outlook itself never show them.
+const SUNBEAM_PROP_GUID = '{6b1f3c2e-8a4d-4e7b-9c51-2f0d7e9a1b34}';
+const SUNBEAM_EVENT_PROP = `String ${SUNBEAM_PROP_GUID} Name SunbeamPlan`;
+const SUNBEAM_SETTINGS_PROP = `String ${SUNBEAM_PROP_GUID} Name SunbeamSettings`;
+
 const Outlook = {
   msal: null,
   account: null,
   clientId: '',
   initError: '',
+  // Set when Microsoft wants you to sign in again (sessions for browser apps last about a day)
+  needsReconnect: false,
 
   get canSignIn() {
     return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -56,9 +65,17 @@ const Outlook = {
 
   async signIn() {
     if (!this.msal) throw new Error(this.initError || 'Add your Application (client) ID in Setup first.');
-    const res = await this.msal.loginPopup({ scopes: GRAPH_SCOPES, prompt: 'select_account' });
+    // Pre-fill the last account so signing in again is one click
+    let loginHint = (this.account && this.account.username) || '';
+    try { loginHint = loginHint || localStorage.getItem('sunbeam_last_account') || ''; } catch (e) {}
+    const res = await this.msal.loginPopup({
+      scopes: GRAPH_SCOPES,
+      ...(loginHint ? { loginHint } : { prompt: 'select_account' })
+    });
     this.account = res.account;
+    this.needsReconnect = false;
     this.msal.setActiveAccount(this.account);
+    try { localStorage.setItem('sunbeam_last_account', this.account.username); } catch (e) {}
     return this.account;
   },
 
@@ -78,13 +95,21 @@ const Outlook = {
     if (!this.connected) throw new Error('Not signed in to Outlook.');
     try {
       const res = await this.msal.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: this.account });
+      this.needsReconnect = false;
       return res.accessToken;
     } catch (err) {
-      if (err instanceof window.msal.InteractionRequiredAuthError) {
-        const res = await this.msal.acquireTokenPopup({ scopes: GRAPH_SCOPES, account: this.account });
-        return res.accessToken;
+      if (!(err instanceof window.msal.InteractionRequiredAuthError)) throw err;
+      // Browsers only allow a popup right after a click; in the background, ask the user instead
+      const clicked = navigator.userActivation ? navigator.userActivation.isActive : false;
+      if (!clicked) {
+        this.needsReconnect = true;
+        const e = new Error('Your Microsoft sign-in has expired. Press "Sign in again".');
+        e.reconnect = true;
+        throw e;
       }
-      throw err;
+      const res = await this.msal.acquireTokenPopup({ scopes: GRAPH_SCOPES, account: this.account });
+      this.needsReconnect = false;
+      return res.accessToken;
     }
   },
 
@@ -151,6 +176,7 @@ const Outlook = {
       reminderMinutesBeforeStart: 15,
       showAs: 'busy',
       categories: ['Sunbeam'],
+      singleValueExtendedProperties: [{ id: SUNBEAM_EVENT_PROP, value: JSON.stringify(planMeta(task)) }],
       ...guests
     };
   },
@@ -180,17 +206,43 @@ const Outlook = {
       startDateTime: startDate.toISOString(),
       endDateTime: endDate.toISOString(),
       $select: 'id,subject,start,end,isAllDay,isCancelled,webLink,categories,reminderMinutesBeforeStart,isReminderOn,isOrganizer,attendees',
+      $expand: `singleValueExtendedProperties($filter=id eq '${SUNBEAM_EVENT_PROP}')`,
       $orderby: 'start/dateTime',
-      $top: '100'
+      $top: '200'
     });
     let url = `/me/calendarView?${params}`;
     const all = [];
-    while (url && all.length < 500) {
+    while (url && all.length < 1500) {
       const page = await this.graph(url, { headers: { Prefer: 'outlook.timezone="UTC"' } });
       all.push(...(page.value || []));
       url = page['@odata.nextLink'] || null;
     }
+    // Attach Sunbeam's stored details (if any) as ev.sunbeam
+    all.forEach(ev => {
+      const prop = (ev.singleValueExtendedProperties || []).find(p => p.id.toLowerCase() === SUNBEAM_EVENT_PROP.toLowerCase());
+      try { ev.sunbeam = prop ? JSON.parse(prop.value) : null; } catch (e) { ev.sunbeam = null; }
+    });
     return all;
+  },
+
+  // ---------- Settings backup (stored on your default calendar, invisible in Outlook) ----------
+
+  async loadSettings() {
+    const params = new URLSearchParams({
+      $select: 'id',
+      $expand: `singleValueExtendedProperties($filter=id eq '${SUNBEAM_SETTINGS_PROP}')`
+    });
+    const cal = await this.graph(`/me/calendar?${params}`);
+    const prop = (cal.singleValueExtendedProperties || [])[0];
+    if (!prop) return null;
+    try { return JSON.parse(prop.value); } catch (e) { return null; }
+  },
+
+  async saveSettings(data) {
+    await this.graph('/me/calendar', {
+      method: 'PATCH',
+      body: { singleValueExtendedProperties: [{ id: SUNBEAM_SETTINGS_PROP, value: JSON.stringify(data) }] }
+    });
   },
 
   // ---------- Mail ----------
@@ -228,6 +280,19 @@ const Outlook = {
 // Outlook deep links show "+" literally, so encode spaces as %20 rather than using URLSearchParams.
 function queryString(obj) {
   return Object.entries(obj).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+}
+
+// The Sunbeam-only details kept inside a calendar event
+function planMeta(task) {
+  return {
+    v: 1,
+    category: task.category,
+    priority: task.priority,
+    completed: task.completed,
+    reminder: task.reminder,
+    subtasks: task.subtasks.map(st => ({ text: st.text, done: st.done })),
+    seriesId: task.seriesId || null
+  };
 }
 
 function toGraphAttendees(emails) {
