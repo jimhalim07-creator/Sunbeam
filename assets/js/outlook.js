@@ -113,10 +113,13 @@ const Outlook = {
     }
   },
 
-  async graph(path, { method = 'GET', body, headers = {} } = {}) {
-    const token = await this.token();
+  // keepalive lets a last save finish while the tab is closing (uses the most recent token)
+  async graph(path, { method = 'GET', body, headers = {}, keepalive = false } = {}) {
+    const token = keepalive && this.lastToken ? this.lastToken : await this.token();
+    this.lastToken = token;
     const res = await fetch(path.startsWith('http') ? path : GRAPH_BASE + path, {
       method,
+      keepalive,
       headers: {
         Authorization: `Bearer ${token}`,
         ...(body ? { 'Content-Type': 'application/json' } : {}),
@@ -181,16 +184,44 @@ const Outlook = {
     };
   },
 
+  // If Outlook ever refuses Sunbeam's hidden details on an event, send the event without them
+  // (its details are then kept in the settings backup) rather than failing the whole save
+  extPropsRefused: false,
+  withoutHiddenDetails(payload) {
+    const { singleValueExtendedProperties, ...rest } = payload;
+    return rest;
+  },
+  isHiddenDetailsError(err) {
+    return err.status === 400 && /extended|propert/i.test(err.message || '');
+  },
+
   async createEvent(task) {
-    const ev = await this.graph('/me/events', { method: 'POST', body: this.eventPayload(task) });
+    // transactionId = the plan's id: Outlook ignores a repeated create, and a wiped browser can
+    // re-link its plans to their events
+    let payload = { ...this.eventPayload(task), transactionId: task.id };
+    if (this.extPropsRefused) payload = this.withoutHiddenDetails(payload);
+    let ev;
+    try {
+      ev = await this.graph('/me/events', { method: 'POST', body: payload });
+    } catch (err) {
+      if (!this.isHiddenDetailsError(err) || this.extPropsRefused) throw err;
+      this.extPropsRefused = true;
+      ev = await this.graph('/me/events', { method: 'POST', body: this.withoutHiddenDetails(payload) });
+    }
     return { id: ev.id, webLink: ev.webLink };
   },
 
   async updateEvent(task, { attendeesChanged = false } = {}) {
-    await this.graph(`/me/events/${encodeURIComponent(task.outlookEventId)}`, {
-      method: 'PATCH',
-      body: this.eventPayload(task, { includeAttendees: attendeesChanged })
-    });
+    const path = `/me/events/${encodeURIComponent(task.outlookEventId)}`;
+    let payload = this.eventPayload(task, { includeAttendees: attendeesChanged });
+    if (this.extPropsRefused) payload = this.withoutHiddenDetails(payload);
+    try {
+      await this.graph(path, { method: 'PATCH', body: payload });
+    } catch (err) {
+      if (!this.isHiddenDetailsError(err) || this.extPropsRefused) throw err;
+      this.extPropsRefused = true;
+      await this.graph(path, { method: 'PATCH', body: this.withoutHiddenDetails(payload) });
+    }
   },
 
   async deleteEvent(eventId) {
@@ -205,7 +236,7 @@ const Outlook = {
     const params = new URLSearchParams({
       startDateTime: startDate.toISOString(),
       endDateTime: endDate.toISOString(),
-      $select: 'id,subject,start,end,isAllDay,isCancelled,webLink,categories,reminderMinutesBeforeStart,isReminderOn,isOrganizer,attendees',
+      $select: 'id,subject,start,end,isAllDay,isCancelled,webLink,categories,reminderMinutesBeforeStart,isReminderOn,isOrganizer,attendees,transactionId',
       $expand: `singleValueExtendedProperties($filter=id eq '${SUNBEAM_EVENT_PROP}')`,
       $orderby: 'start/dateTime',
       $top: '200'
@@ -238,9 +269,10 @@ const Outlook = {
     try { return JSON.parse(prop.value); } catch (e) { return null; }
   },
 
-  async saveSettings(data) {
+  async saveSettings(data, { keepalive = false } = {}) {
     await this.graph('/me/calendar', {
       method: 'PATCH',
+      keepalive,
       body: { singleValueExtendedProperties: [{ id: SUNBEAM_SETTINGS_PROP, value: JSON.stringify(data) }] }
     });
   },

@@ -267,7 +267,10 @@ function normalizeTask(t) {
     needsSync: !!t.needsSync,
     needsAttendeeSync: !!t.needsAttendeeSync,
     // You unticked "Add to my Outlook calendar" for this plan
-    keepLocal: !!t.keepLocal
+    keepLocal: !!t.keepLocal,
+    // When it last changed here, and why the last send to Outlook failed (if it did)
+    localChangedAt: Number(t.localChangedAt) || 0,
+    syncError: t.syncError || ''
   };
 }
 
@@ -299,9 +302,12 @@ function setHoursHint(hintEl, { date, time, duration, category, guests, source }
 }
 
 function updateFormHoursHint() {
+  const allDay = $('task-allday-check').checked;
+  taskTimeInput.disabled = allDay;
+  taskDurationSelect.disabled = allDay;
   setHoursHint($('task-hours-hint'), {
     date: taskDateInput.value,
-    time: taskTimeInput.value,
+    time: allDay ? '' : taskTimeInput.value,
     duration: Number(taskDurationSelect.value),
     category: taskCategorySelect.value,
     guests: parseEmails($('task-invitees-input').value),
@@ -359,6 +365,8 @@ function loadSavedState() {
   if (!Array.isArray(hiddenOutlookIds)) hiddenOutlookIds = [];
   if (!Array.isArray(firedReminderKeys)) firedReminderKeys = [];
   settingsSavedAt = Number(readStored('sunbeam_settings_saved_at', '0')) || 0;
+  pendingEventDeletes = readStored('sunbeam_pending_deletes', [], true);
+  if (!Array.isArray(pendingEventDeletes)) pendingEventDeletes = [];
 
   const savedTheme = readStored('sunbeam_evening_mode', null);
   isEveningMode = savedTheme === null ? window.matchMedia('(prefers-color-scheme: dark)').matches : savedTheme === 'true';
@@ -388,6 +396,7 @@ function saveState() {
     localStorage.setItem('sunbeam_ms_tenant', msTenantOverride);
     localStorage.setItem('sunbeam_autosync', autoSyncDefault ? 'true' : 'false');
     localStorage.setItem('sunbeam_settings_saved_at', String(settingsSavedAt));
+    localStorage.setItem('sunbeam_pending_deletes', JSON.stringify(pendingEventDeletes));
     localStorage.setItem('sunbeam_email_scope', emailScope);
     localStorage.setItem('sunbeam_evening_mode', isEveningMode ? 'true' : 'false');
     localStorage.setItem('sunbeam_focus_sessions', String(focusSessionsCompleted));
@@ -518,6 +527,16 @@ function refreshOutlookUI() {
   const connected = status === 'connected';
   const user = Outlook.account ? Outlook.account.username : '';
 
+  const banner = $('reconnect-banner');
+  banner.classList.toggle('hidden', status !== 'expired');
+  banner.classList.toggle('flex', status === 'expired');
+  if (status === 'expired') {
+    const n = pendingCount();
+    $('reconnect-text').textContent = n
+      ? `Your Outlook sign-in expired. ${n} ${n === 1 ? 'change is' : 'changes are'} waiting here and will be sent when you sign in again.`
+      : 'Your Outlook sign-in expired. Sign in again to keep your calendar in step.';
+  }
+
   const pillStyles = {
     connected: ['bg-emerald-100 text-emerald-900 border-emerald-300', `Connected · ${user}`],
     expired: ['bg-amber-100 text-amber-900 border-amber-300', 'Sign-in expired'],
@@ -646,62 +665,117 @@ async function connectOrDisconnectOutlook() {
   }
 }
 
-async function pushTaskToOutlook(task, { quiet = false, attendeesChanged = false } = {}) {
+// ---------- One queue for everything that talks to Outlook ----------
+// Sends and syncs run one after another, never at the same time. (When they overlapped, a sync
+// that started before a new plan reached Outlook could decide the plan had been deleted.)
+let outlookChain = Promise.resolve();
+function enqueueOutlook(fn) {
+  const run = outlookChain.then(fn, fn);
+  outlookChain = run.catch(() => {});
+  return run;
+}
+
+// Call after ANY change to a plan. It's saved here at once and sent to Outlook within a second,
+// then retried until Outlook confirms it.
+//   outlookFields: title/date/time/length/reminder/guests changed (always true for plans with
+//                  no guests, whose area/priority/steps/done also live inside the event)
+function markChanged(task, { outlookFields = true, attendeesChanged = false } = {}) {
+  task.localChangedAt = Date.now();
+  const meetingWithGuests = task.source === 'outlook' || task.attendees.length > 0;
+  if (task.outlookEventId && (outlookFields || !meetingWithGuests)) task.needsSync = true;
+  if (attendeesChanged) task.needsAttendeeSync = true;
+  task.syncError = '';
+  saveState();
+  scheduleFlush();
+}
+
+// Plans still to send: never-sent plans (unless kept off the calendar) and unsent edits
+function needsPush(t) {
+  if (t.source === 'outlook' && !t.isOrganizer) return false;
+  return t.needsSync || (t.source === 'sunbeam' && !t.outlookEventId && !t.completed && !t.keepLocal);
+}
+
+function pendingCount() {
+  return tasks.filter(needsPush).length;
+}
+
+let flushTimer = null;
+let retryDelay = 15000;
+function scheduleFlush(delay = 600) {
+  clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => enqueueOutlook(flushOutbox), delay);
+}
+
+// Send every pending plan; on failure, retry later with a growing delay (15 s → 5 min)
+async function flushOutbox() {
+  if (!Outlook.connected || Outlook.needsReconnect) return { ok: 0, failed: pendingCount() };
+  await processPendingDeletes();
+  const pending = tasks.filter(needsPush);
+  let ok = 0, failed = 0;
+  for (const t of pending) {
+    if (await pushTaskToOutlook(t)) ok++;
+    else failed++;
+  }
+  if (pending.length) render();
+  if (failed && !Outlook.needsReconnect) {
+    scheduleFlush(retryDelay);
+    retryDelay = Math.min(retryDelay * 2, 5 * 60000);
+  } else {
+    retryDelay = 15000;
+  }
+  return { ok, failed };
+}
+
+// The actual Graph call for one plan. Don't call directly; use markChanged / flushOutbox.
+async function pushTaskToOutlook(task) {
   if (!Outlook.connected) return false;
-  // Imported meetings can only be changed (never created) and only if you organised them
   if (task.source === 'outlook' && (!task.isOrganizer || !task.outlookEventId)) return false;
+  const version = task.localChangedAt || 0;
   try {
     if (task.outlookEventId) {
-      await Outlook.updateEvent(task, { attendeesChanged: attendeesChanged || task.needsAttendeeSync });
-      if (task.needsSync) appendSyncLog(`Updated "${task.text}" in Outlook`);
+      await Outlook.updateEvent(task, { attendeesChanged: task.needsAttendeeSync });
+      appendSyncLog(`Saved changes to "${task.text}" in Outlook`);
     } else {
       const ev = await Outlook.createEvent(task);
       task.outlookEventId = ev.id;
       task.webLink = ev.webLink;
-      appendSyncLog(`Added "${task.text}" to Outlook (${task.date} ${task.time || ''})${task.attendees.length ? ` and invited ${task.attendees.join(', ')}` : ''}`);
+      task.linkedAt = Date.now();
+      appendSyncLog(`Added "${task.text}" to Outlook (${task.date} ${task.time || 'all day'})${task.attendees.length ? ` and invited ${task.attendees.join(', ')}` : ''}`);
     }
-    task.needsSync = false;
-    task.needsAttendeeSync = false;
+    // Only clear the flags if nothing changed while the request was on its way
+    if ((task.localChangedAt || 0) === version) {
+      task.needsSync = false;
+      task.needsAttendeeSync = false;
+    }
     task.keepLocal = false;
+    task.syncError = '';
     saveState();
-    if (!quiet) render();
     return true;
   } catch (err) {
     if (err.status === 404 && task.outlookEventId) {
-      // The event was deleted in Outlook; forget the link so it can be re-added.
+      // Deleted in Outlook meanwhile: forget the link so it's added again
       task.outlookEventId = null;
       task.webLink = null;
-      saveState();
-    } else if (err.reconnect && task.outlookEventId) {
-      // Try again after you sign in again
+      task.needsSync = false;
+    } else if (task.outlookEventId) {
       task.needsSync = true;
-      saveState();
     }
-    appendSyncLog(`Couldn't sync "${task.text}": ${describeGraphError(err)}`, true);
+    task.syncError = err.reconnect ? 'Waiting for you to sign in again' : describeGraphError(err);
+    saveState();
+    appendSyncLog(`Couldn't save "${task.text}" to Outlook: ${task.syncError}`, true);
     return false;
   }
 }
 
+// "Push unsynced plans" button
 async function pushUnsyncedTasks() {
-  const pending = tasks.filter(needsPush);
-  if (pending.length === 0) {
-    showToast('Everything open is already on your calendar.', '☁️', 'Outlook');
+  if (!pendingCount()) {
+    showToast('Everything is already saved in Outlook.', '☁️', 'Outlook');
     return;
   }
-  await withOutlookBusy(async () => {
-    let ok = 0;
-    for (const t of pending) {
-      if (await pushTaskToOutlook(t, { quiet: true })) ok++;
-    }
-    render();
-    sounds.playComplete();
-    showToast(`Synced ${ok} of ${pending.length} plans with your Outlook calendar.`, '🔄', 'Outlook');
-  });
-}
-
-// Open plans not on the calendar yet, plus any edits made while signed out
-function needsPush(t) {
-  return t.needsSync || (t.source === 'sunbeam' && !t.outlookEventId && !t.completed && !t.keepLocal);
+  const { ok, failed } = await enqueueOutlook(flushOutbox);
+  sounds.playComplete();
+  showToast(failed ? `Saved ${ok}; ${failed} couldn't reach Outlook yet and will retry.` : `Saved ${ok} ${ok === 1 ? 'plan' : 'plans'} to Outlook.`, failed ? '⏳' : '☁️', 'Outlook');
 }
 
 // ---------- Reading your calendar ----------
@@ -719,9 +793,11 @@ function eventFields(ev) {
   const endDt = fromGraphUtc(ev.end.dateTime);
   return {
     text: stripDone(ev.subject) || '(No title)',
-    date: ev.isAllDay ? ev.start.dateTime.slice(0, 10) : zonedParts(startDt).ymd,
+    // All-day events come back as midnight in their own zone, shown here in UTC; reading the
+    // date in Cairo time gives the right day both for Outlook's and Sunbeam's all-day events
+    date: zonedParts(startDt).ymd,
     time: ev.isAllDay ? '' : zonedParts(startDt).hm,
-    duration: Math.max(15, Math.round((endDt - startDt) / 60000)),
+    duration: ev.isAllDay ? 60 : Math.max(15, Math.round((endDt - startDt) / 60000)),
     webLink: ev.webLink || null,
     isOrganizer: !!ev.isOrganizer,
     attendees: (ev.attendees || []).map(a => (a.emailAddress && a.emailAddress.address || '').toLowerCase()).filter(Boolean)
@@ -744,23 +820,38 @@ function applyMeta(task, meta) {
   }
 }
 
-// Fetch Outlook events between two dates (YYYY-MM-DD, end exclusive) and merge them in
+// A plan changed here since this fetch started must not be overwritten or removed by it
+function changedSince(t, since) {
+  return t.needsSync || (t.localChangedAt || 0) > since || (t.linkedAt || 0) > since;
+}
+
+// Fetch Outlook events between two dates (YYYY-MM-DD, end exclusive) and merge them in.
+// Runs inside the Outlook queue.
 async function pullOutlookRange(startYmd, endYmd) {
+  const fetchStarted = Date.now();
   const events = await Outlook.listEvents(zonedToDate(startYmd, '00:00'), zonedToDate(endYmd, '00:00'));
   const seen = new Set();
   let added = 0, updated = 0;
 
   events.forEach(ev => {
-    if (ev.isCancelled || hiddenOutlookIds.includes(ev.id)) return;
+    if (ev.isCancelled || hiddenOutlookIds.includes(ev.id) || pendingEventDeletes.some(d => d.id === ev.id)) return;
     seen.add(ev.id);
     const fields = eventFields(ev);
     const ours = !!ev.sunbeam || (Array.isArray(ev.categories) && ev.categories.includes('Sunbeam'));
     // Details for meetings with guests (and imported meetings) live in the settings backup
     const meta = cloudMeetingMeta[ev.id] || ev.sunbeam;
-    const existing = tasks.find(t => t.outlookEventId === ev.id);
+    // Match by event id, or by the plan id Sunbeam sent as the event's transactionId
+    let existing = tasks.find(t => t.outlookEventId === ev.id);
+    if (!existing && ev.transactionId) {
+      existing = tasks.find(t => t.id === ev.transactionId && !t.outlookEventId);
+      if (existing) {
+        existing.outlookEventId = ev.id;
+        existing.webLink = ev.webLink || null;
+      }
+    }
 
     if (existing) {
-      if (existing.needsSync) return; // your unsent edit wins; it gets pushed
+      if (changedSince(existing, fetchStarted)) return; // your newer change wins; it's being sent
       const before = JSON.stringify([existing.text, existing.date, existing.time, existing.duration, existing.attendees]);
       Object.assign(existing, fields);
       // Details from Outlook only fill in once per session, so ticks you make now aren't undone
@@ -772,7 +863,7 @@ async function pullOutlookRange(startYmd, endYmd) {
 
     const task = normalizeTask({
       ...fields,
-      id: uid(),
+      id: ev.transactionId || uid(),
       source: ours ? 'sunbeam' : 'outlook',
       outlookEventId: ev.id,
       category: 'Work',
@@ -787,9 +878,10 @@ async function pullOutlookRange(startYmd, endYmd) {
     added++;
   });
 
-  // Anything linked to Outlook in this range that's gone was deleted or cancelled in Outlook
+  // Linked plans in this range that Outlook no longer has were deleted or cancelled there
+  // (but never touch a plan you changed or that reached Outlook after this fetch began)
   const before = tasks.length;
-  tasks = tasks.filter(t => !(t.outlookEventId && !t.needsSync && t.date >= startYmd && t.date < endYmd && !seen.has(t.outlookEventId)));
+  tasks = tasks.filter(t => !(t.outlookEventId && t.date >= startYmd && t.date < endYmd && !seen.has(t.outlookEventId) && !changedSince(t, fetchStarted)));
   return { added, updated, removed: before - tasks.length };
 }
 
@@ -798,10 +890,16 @@ function monthRange(year, month) {
   return [start, formatYMD(new Date(year, month + 1, 1))];
 }
 
-// Full sync: settings backup first, then last month through two months ahead
-async function syncWithOutlook({ quiet = true } = {}) {
-  if (!Outlook.connected || outlookBusy) return;
-  await withOutlookBusy(async () => {
+// Full sync: settings backup, last month through two months ahead, then send anything pending
+let syncQueued = false;
+function syncWithOutlook({ quiet = true } = {}) {
+  if (!Outlook.connected || syncQueued) return Promise.resolve();
+  syncQueued = true;
+  return enqueueOutlook(async () => {
+    syncQueued = false;
+    if (!Outlook.connected) return;
+    outlookBusy = true;
+    refreshOutlookUI();
     try {
       await loadCloudSettings();
       const now = monthOf(todayYMD());
@@ -817,44 +915,45 @@ async function syncWithOutlook({ quiet = true } = {}) {
       }
       lastFullSyncAt = Date.now();
       saveState();
-      render();
       appendSyncLog(`Synced with Outlook: ${totals.added} new, ${totals.updated} changed, ${totals.removed} removed.`);
+      await flushOutbox();
       if (!quiet) {
         sounds.playAdd();
         showToast(`Calendar synced: ${totals.added} new, ${totals.updated} changed.`, '📥', 'Outlook');
       }
-      // Plans edited or created while signed out go up now
-      const pending = tasks.filter(t => t.needsSync || (autoSyncDefault && needsPush(t)));
-      for (const t of pending) await pushTaskToOutlook(t, { quiet: true });
-      if (pending.length) render();
     } catch (err) {
       appendSyncLog(`Sync failed: ${describeGraphError(err)}`, true);
       if (!quiet || err.reconnect) showToast(describeGraphError(err), err.reconnect ? '🔐' : '⚠️', 'Outlook');
+    } finally {
+      outlookBusy = false;
+      render();
     }
   });
 }
 
 // Make sure the month(s) you're looking at have been fetched from Outlook
-async function ensureMonthsLoaded(ymdList) {
-  if (!Outlook.connected || Outlook.needsReconnect || !cloudReady || outlookBusy) return;
+function ensureMonthsLoaded(ymdList) {
+  if (!Outlook.connected || Outlook.needsReconnect || !cloudReady) return;
   const missing = [...new Set(ymdList.map(d => d.slice(0, 7)))].filter(m => !loadedMonths.has(m));
   if (!missing.length) return;
   missing.forEach(m => loadedMonths.add(m));
-  try {
-    for (const m of missing) {
-      const [y, mo] = m.split('-').map(Number);
-      const [a, b] = monthRange(y, mo - 1);
-      await pullOutlookRange(a, b);
+  enqueueOutlook(async () => {
+    try {
+      for (const m of missing) {
+        const [y, mo] = m.split('-').map(Number);
+        const [a, b] = monthRange(y, mo - 1);
+        await pullOutlookRange(a, b);
+      }
+      saveState();
+      render();
+    } catch (err) {
+      missing.forEach(m => loadedMonths.delete(m));
+      appendSyncLog(`Couldn't load that month from Outlook: ${describeGraphError(err)}`, true);
     }
-    saveState();
-    render();
-  } catch (err) {
-    missing.forEach(m => loadedMonths.delete(m));
-    appendSyncLog(`Couldn't load that month from Outlook: ${describeGraphError(err)}`, true);
-  }
+  });
 }
 
-// Kept for the "Import Outlook events" buttons
+// Kept for the "Sync now" buttons
 function pullOutlookEvents({ quiet = false } = {}) {
   return syncWithOutlook({ quiet });
 }
@@ -874,7 +973,7 @@ const CLOUD_MAX_CHARS = 30000;
 function buildCloudSettings() {
   const meetingMeta = {};
   tasks
-    .filter(t => t.outlookEventId && (t.source === 'outlook' || t.attendees.length))
+    .filter(t => t.outlookEventId && (t.source === 'outlook' || t.attendees.length || Outlook.extPropsRefused))
     .slice(-300)
     .forEach(t => { meetingMeta[t.outlookEventId] = planMeta(t); });
   const data = {
@@ -1119,6 +1218,25 @@ function setIcon(container, name) {
   refreshIcons();
 }
 
+// "In Outlook" / "Saving…" / "Not in Outlook yet · Retry" on each plan
+function syncStatusTag(task) {
+  if (task.keepLocal && !task.outlookEventId) return tag('Only in Sunbeam', 'bg-stone-100 text-stone-600 border-stone-200', 'monitor');
+  if (!Outlook.connected && !task.outlookEventId) return null;
+  if (task.syncError && needsPush(task)) {
+    const t = tag('Not in Outlook yet · Retry', 'bg-rose-50 text-rose-700 border-rose-200 cursor-pointer hover:bg-rose-100', 'cloud-off');
+    t.title = task.syncError;
+    t.addEventListener('click', e => {
+      e.stopPropagation();
+      markChanged(task, { outlookFields: true });
+      render();
+    });
+    return t;
+  }
+  if (needsPush(task)) return tag('Saving to Outlook…', 'bg-amber-50 text-amber-800 border-amber-200', 'loader');
+  if (task.outlookEventId) return tag('In Outlook', 'bg-sky-50 text-sky-800 border-sky-200', 'calendar-check');
+  return null;
+}
+
 function tag(text, classes, iconName) {
   const t = el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border font-semibold ${classes}`);
   if (iconName) t.appendChild(icon(iconName));
@@ -1194,14 +1312,15 @@ function renderDayView() {
     } else {
       meta.appendChild(tag(CATEGORIES[task.category].label, CATEGORIES[task.category].tag, CATEGORIES[task.category].icon));
       meta.appendChild(tag(PRIORITIES[task.priority].label, PRIORITIES[task.priority].tag, PRIORITIES[task.priority].icon));
-      if (task.outlookEventId) meta.appendChild(tag('On calendar', 'bg-sky-50 text-sky-800 border-sky-200', 'calendar-check'));
+
     }
     if (task.attendees.length) {
       const guests = tag(`👥 ${task.attendees.length}`, 'bg-sky-50 text-sky-800 border-sky-200');
       guests.title = task.attendees.join(', ');
       meta.appendChild(guests);
     }
-    if (task.needsSync) meta.appendChild(tag('Edit not in Outlook yet', 'bg-amber-50 text-amber-800 border-amber-200', 'hourglass'));
+    const status = syncStatusTag(task);
+    if (status) meta.appendChild(status);
     if (task.reminder) meta.appendChild(tag('', 'bg-rose-50 text-rose-700 border-rose-200', 'bell'));
     if (task.seriesId) meta.appendChild(tag('', 'bg-stone-100 text-stone-600 border-stone-200', 'repeat'));
     if (task.subtasks.length) {
@@ -1271,7 +1390,11 @@ function renderDayView() {
     } else if (task.source === 'sunbeam') {
       actions.appendChild(iconButton('calendar-plus', Outlook.connected ? 'Add to Outlook calendar' : 'Open in Outlook calendar', 'bg-white text-sky-700 border-sky-200 hover:bg-sky-50', async () => {
         if (Outlook.connected) {
-          if (await pushTaskToOutlook(task)) showToast(`"${task.text}" is on your Outlook calendar.`, '☁️', 'Outlook');
+          task.keepLocal = false;
+          markChanged(task);
+          await enqueueOutlook(flushOutbox);
+          if (task.outlookEventId) showToast(`"${task.text}" is on your Outlook calendar.`, '☁️', 'Outlook');
+          else showToast(task.syncError || 'Couldn\'t reach Outlook yet; it will retry.', '⏳', 'Outlook');
         } else {
           window.open(Outlook.composeEventUrl(task), '_blank', 'noopener');
         }
@@ -1683,7 +1806,7 @@ async function addTask() {
     id: uid(),
     text,
     date,
-    time: taskTimeInput.value || WORK_HOURS.start,
+    time: $('task-allday-check').checked ? '' : (taskTimeInput.value || WORK_HOURS.start),
     duration: Number(taskDurationSelect.value),
     category: taskCategorySelect.value,
     priority: selectedPriority,
@@ -1703,15 +1826,17 @@ async function addTask() {
   const when = parseYMD(baseDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   const invites = attendees.length ? ` and invited ${attendees.length} ${attendees.length === 1 ? 'person' : 'people'}` : '';
   // Invitations are sent by Outlook, so a plan with guests always goes on the calendar
-  if ((taskAutosyncCheck.checked || attendees.length) && Outlook.connected) {
-    let ok = 0;
-    for (const t of created) {
-      if (await pushTaskToOutlook(t, { quiet: true })) ok++;
-    }
+  created.forEach(t => { t.localChangedAt = Date.now(); });
+  saveState();
+  if ((taskAutosyncCheck.checked || attendees.length) && Outlook.connected && !Outlook.needsReconnect) {
+    await enqueueOutlook(flushOutbox);
+    const ok = created.filter(t => t.outlookEventId).length;
     render();
     showToast(ok === created.length
-      ? `Added for ${when}, put on your Outlook calendar${invites}.`
-      : `Added for ${when}. ${created.length - ok} couldn't reach Outlook — see the Outlook tab.`, ok === created.length ? '☁️' : '⚠️', 'Plan added');
+      ? `Added for ${when}, saved to your Outlook calendar${invites}.`
+      : `Added for ${when}. Outlook didn't accept it yet (${created[0].syncError || 'no connection'}); Sunbeam keeps retrying.`, ok === created.length ? '☁️' : '⏳', 'Plan added');
+  } else if ((taskAutosyncCheck.checked || attendees.length) && Outlook.needsReconnect) {
+    showToast(`Added for ${when}. Sign in again and it goes straight to Outlook.`, '🔐', 'Plan added');
   } else if (attendees.length) {
     showToast(`Added for ${when}. Invitations go out once you connect Outlook and press "Push unsynced plans".`, '✉️', 'Plan added');
   } else if (taskAutosyncCheck.checked) {
@@ -1736,9 +1861,9 @@ function toggleTask(id) {
   }
 
   render();
-  // Mirror the ✓ onto the Outlook event title (only for events Sunbeam created, and never for
-  // meetings with guests, who would otherwise get an update email every time you tick it)
-  if (task.outlookEventId && task.source === 'sunbeam' && !task.attendees.length) pushTaskToOutlook(task, { quiet: true });
+  // Plans without guests get the ✓ in Outlook; meetings with guests keep it in the backup so
+  // guests aren't emailed an update every time you tick it
+  markChanged(task, { outlookFields: false });
 }
 
 function deleteTask(id) {
@@ -1766,17 +1891,27 @@ async function forgetTask(task) {
     hiddenOutlookIds.push(task.outlookEventId);
     saveState();
   } else if (task.outlookEventId) {
-    if (Outlook.connected) {
-      try {
-        await Outlook.deleteEvent(task.outlookEventId);
-        appendSyncLog(`Removed "${task.text}" from Outlook`);
-      } catch (err) {
-        appendSyncLog(`Couldn't remove "${task.text}" from Outlook: ${describeGraphError(err)}`, true);
-      }
-    } else {
-      appendSyncLog(`"${task.text}" was deleted here but is still on your Outlook calendar (not signed in).`, true);
+    pendingEventDeletes.push({ id: task.outlookEventId, text: task.text });
+    saveState();
+    enqueueOutlook(processPendingDeletes);
+  }
+}
+
+// Events waiting to be deleted in Outlook; syncs ignore them so a deleted plan can't come back
+let pendingEventDeletes = [];
+async function processPendingDeletes() {
+  if (!Outlook.connected || Outlook.needsReconnect || !pendingEventDeletes.length) return;
+  for (const d of [...pendingEventDeletes]) {
+    try {
+      await Outlook.deleteEvent(d.id);
+      pendingEventDeletes = pendingEventDeletes.filter(x => x.id !== d.id);
+      appendSyncLog(`Removed "${d.text}" from Outlook`);
+    } catch (err) {
+      appendSyncLog(`Couldn't remove "${d.text}" from Outlook yet: ${describeGraphError(err)}`, true);
+      if (err.reconnect) break;
     }
   }
+  saveState();
 }
 
 function clearCompleted() {
@@ -1789,13 +1924,9 @@ function clearCompleted() {
   done.forEach(forgetTask);
 }
 
-// Steps live inside the Outlook event; send changes a moment after you stop clicking.
-// Meetings with guests keep them in the settings backup instead (so guests get no update emails).
-const pushTimers = {};
+// Steps live inside the Outlook event (or in the backup for meetings with guests)
 function schedulePush(task) {
-  if (!task.outlookEventId || task.source !== 'sunbeam' || task.attendees.length || !Outlook.connected) return;
-  clearTimeout(pushTimers[task.id]);
-  pushTimers[task.id] = setTimeout(() => pushTaskToOutlook(task, { quiet: true }), 1500);
+  markChanged(task, { outlookFields: false });
 }
 
 function addSubtaskToTask(taskId, stepText) {
@@ -1842,7 +1973,7 @@ function snoozeTask(id) {
   sounds.playAdd();
   showToast(`Snoozed to ${formatTime12(task.time)}`, '⏰', 'Reminder');
   render();
-  if (task.outlookEventId && task.source === 'sunbeam') pushTaskToOutlook(task, { quiet: true });
+  markChanged(task);
 }
 
 // ==========================================
@@ -1958,32 +2089,26 @@ async function saveEditDialog() {
     priority: task.source === 'outlook' ? task.priority : $('edit-priority').value
   });
 
-  const shouldSync = (task.outlookEventId && outlookChanged) || (!task.outlookEventId && task.source === 'sunbeam' && attendees.length);
+  // Adding guests to a plan that isn't on the calendar puts it there (Outlook sends the invites)
+  if (attendees.length) task.keepLocal = false;
+  const wasOnCalendar = !!task.outlookEventId;
+  markChanged(task, { outlookFields: outlookChanged, attendeesChanged });
   closeEditDialog();
   selectedDate = date;
   render();
 
-  if (!shouldSync) {
+  if (!needsPush(task)) {
     sounds.playAdd();
     showToast('Changes saved.', '✎', 'Updated');
     return;
   }
-  if (!Outlook.connected) {
-    task.needsSync = true;
-    task.needsAttendeeSync = task.needsAttendeeSync || attendeesChanged;
-    saveState();
-    render();
-    showToast('Saved here. Connect Outlook and press "Push unsynced plans" to update your calendar.', '⏳', 'Updated');
+  if (!Outlook.connected || Outlook.needsReconnect) {
+    showToast('Saved here. It goes to Outlook as soon as you\'re signed in.', '⏳', 'Updated');
     return;
   }
 
-  const wasOnCalendar = !!task.outlookEventId;
-  const ok = await pushTaskToOutlook(task, { quiet: true, attendeesChanged });
-  if (!ok) {
-    task.needsSync = true;
-    task.needsAttendeeSync = task.needsAttendeeSync || attendeesChanged;
-    saveState();
-  }
+  await enqueueOutlook(flushOutbox);
+  const ok = !needsPush(task);
   render();
   if (ok) {
     sounds.playComplete();
@@ -1991,7 +2116,7 @@ async function saveEditDialog() {
       ? `Outlook updated${attendees.length ? ' and your guests notified' : ''}.`
       : `Added to Outlook and invited ${attendees.length} ${attendees.length === 1 ? 'guest' : 'guests'}.`, '☁️', 'Updated');
   } else {
-    showToast('Saved here, but Outlook didn\'t accept the change. See the Outlook tab for details.', '⚠️', 'Updated');
+    showToast(`Saved here; Outlook didn't accept it yet (${task.syncError || 'no connection'}). Sunbeam keeps retrying.`, '⏳', 'Updated');
   }
 }
 
@@ -2326,7 +2451,7 @@ $('edit-dialog').addEventListener('click', e => {
   if (e.target === $('edit-dialog')) closeEditDialog();
 });
 ['edit-invitees', 'edit-allday', 'edit-date', 'edit-time', 'edit-duration', 'edit-category'].forEach(id => $(id).addEventListener('input', updateEditDialogHints));
-[taskDateInput, taskTimeInput, taskDurationSelect, taskCategorySelect, $('task-invitees-input')].forEach(input => input.addEventListener('input', updateFormHoursHint));
+[taskDateInput, taskTimeInput, taskDurationSelect, taskCategorySelect, $('task-invitees-input'), $('task-allday-check')].forEach(input => input.addEventListener('input', updateFormHoursHint));
 
 taskAutosyncCheck.addEventListener('change', () => {
   autoSyncDefault = taskAutosyncCheck.checked;
@@ -2415,6 +2540,7 @@ moodBtns.forEach(btn => btn.addEventListener('click', () => {
 
 // Outlook
 $('ms-graph-login-btn').addEventListener('click', connectOrDisconnectOutlook);
+$('reconnect-btn').addEventListener('click', connectOrDisconnectOutlook);
 $('header-outlook-chip').addEventListener('click', () => switchView('outlook'));
 $('ms-graph-sync-now-btn').addEventListener('click', pushUnsyncedTasks);
 $('ms-graph-pull-btn').addEventListener('click', () => pullOutlookEvents());
@@ -2571,6 +2697,20 @@ $('search-all-dates-check').addEventListener('change', e => {
     appendSyncLog(`Signed in as ${Outlook.account.username}`);
     syncWithOutlook({ quiet: true });
   }
+
+  // Closing the tab: one last save of the settings backup, and a warning if plans haven't reached Outlook
+  window.addEventListener('pagehide', () => {
+    if (cloudReady && Outlook.connected && !Outlook.needsReconnect && JSON.stringify(buildCloudSettings()) !== lastCloudJson) {
+      settingsSavedAt = Date.now();
+      Outlook.saveSettings({ ...buildCloudSettings(), savedAt: settingsSavedAt }, { keepalive: true }).catch(() => {});
+    }
+  });
+  window.addEventListener('beforeunload', e => {
+    if (Outlook.connected && (pendingCount() || pendingEventDeletes.length)) {
+      e.preventDefault();
+      e.returnValue = 'Some changes are still on their way to Outlook.';
+    }
+  });
 
   // Keep in step with Outlook: every 15 minutes, and when you come back to the tab after 5+ minutes
   setInterval(() => syncWithOutlook({ quiet: true }), 15 * 60000);
