@@ -1158,10 +1158,10 @@ function updateDashboard() {
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
   const reminderCount = upcomingReminders().length;
 
-  $('stat-total').textContent = total;
-  $('stat-completed').textContent = completed;
-  $('stat-pending').textContent = total - completed;
-  $('stat-reminders').textContent = reminderCount;
+  setCount($('stat-total'), total);
+  setCount($('stat-completed'), completed);
+  setCount($('stat-pending'), total - completed);
+  setCount($('stat-reminders'), reminderCount);
   $('nav-reminder-badge').classList.toggle('hidden', reminderCount === 0);
 
   $('progress-percent').textContent = `${percent}%`;
@@ -1237,6 +1237,38 @@ function syncStatusTag(task) {
   return null;
 }
 
+// Update a number, with a little bounce when it changes
+function setCount(node, value) {
+  const text = String(value);
+  if (node.textContent === text) return;
+  node.textContent = text;
+  node.classList.remove('count-bump');
+  void node.offsetWidth; // restart the animation
+  node.classList.add('count-bump');
+}
+
+// Slide the gradient pill under the current tab
+function moveNavIndicator() {
+  const active = document.querySelector('.nav-tab[aria-current="page"]');
+  const pill = $('nav-indicator');
+  if (!active || !pill) return;
+  pill.style.left = `${active.offsetLeft}px`;
+  pill.style.width = `${active.offsetWidth}px`;
+}
+
+// A different colour band for each day of the week
+const DAY_GRADIENTS = [
+  'linear-gradient(90deg, #F2B233, #F07D3A)', // Sun
+  'linear-gradient(90deg, #2A4A91, #4C8DF6)', // Mon
+  'linear-gradient(90deg, #17776E, #22B8A7)', // Tue
+  'linear-gradient(90deg, #E0457B, #7C5CE0)', // Wed
+  'linear-gradient(90deg, #F07D3A, #E0457B)', // Thu
+  'linear-gradient(90deg, #22B8A7, #4C8DF6)', // Fri
+  'linear-gradient(90deg, #7C5CE0, #2A4A91)'  // Sat
+];
+
+let lastToggledId = null;
+
 function tag(text, classes, iconName) {
   const t = el('span', `inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border font-semibold ${classes}`);
   if (iconName) t.appendChild(icon(iconName));
@@ -1297,6 +1329,7 @@ function renderDayView() {
       task.completed ? 'bg-emerald-500 border-emerald-600 text-white' : 'border-stone-300 bg-white hover:border-amber-500 text-transparent'
     }`, '✓');
     checkBtn.type = 'button';
+    if (task.id === lastToggledId && task.completed) checkBtn.classList.add('check-pop');
     checkBtn.setAttribute('aria-label', task.completed ? 'Mark as not done' : 'Mark as done');
     checkBtn.addEventListener('click', () => toggleTask(task.id));
 
@@ -1441,9 +1474,10 @@ function renderWeekView() {
 
   weekDays.forEach(day => {
     const isToday = day.date === today;
-    const col = el('div', `warm-card rounded-2xl p-3 flex flex-col min-h-[200px] lg:min-h-[360px] ${isToday ? 'ring-2 ring-amber-400' : ''} ${day.isWork ? '' : 'weekend-col'}`);
+    const col = el('div', `warm-card rounded-2xl p-3 flex flex-col min-h-[200px] lg:min-h-[360px] ${isToday ? 'today-glow' : ''} ${day.isWork ? '' : 'weekend-col'}`);
 
-    const header = el('div', 'border-b border-stone-100 pb-2 mb-2 flex items-center justify-between gap-1');
+    const header = el('div', 'week-day-head border-b border-stone-100 pb-2 mb-2 flex items-center justify-between gap-1');
+    header.style.setProperty('--day-grad', DAY_GRADIENTS[parseYMD(day.date).getDay()]);
     const titleDiv = el('div', 'min-w-0');
     titleDiv.appendChild(el('span', `block text-xs font-bold ${isToday ? 'text-amber-700' : 'text-stone-800'}`, isToday ? `${day.name} · Today` : day.name));
     titleDiv.appendChild(el('span', 'block text-[11px] text-stone-400 font-medium', day.label));
@@ -1558,6 +1592,10 @@ function renderMonthView() {
       isToday ? 'border-amber-500 ring-2 ring-amber-200' : 'border-[#E3D3B5] hover:border-amber-300 hover:bg-amber-50/30'
     }`);
     cell.type = 'button';
+    if (dayTasks.length) {
+      cell.classList.add('has-plans');
+      cell.style.setProperty('--heat', String(Math.min(1, dayTasks.length / 4)));
+    }
     cell.setAttribute('aria-label', `${parseYMD(dateStr).toDateString()}, ${dayTasks.length} plans`);
     cell.addEventListener('click', () => {
       selectedDate = dateStr;
@@ -1766,15 +1804,14 @@ function switchView(viewName) {
   Object.entries(views).forEach(([name, section]) => section.classList.toggle('hidden', name !== viewName));
   navTabs.forEach(tab => {
     const on = tab.dataset.view === viewName;
-    tab.classList.toggle('bg-white', on);
-    tab.classList.toggle('text-sky-800', on);
-    tab.classList.toggle('shadow-sm', on);
+    // The sliding pill (#nav-indicator) is the active background now
     tab.classList.toggle('font-bold', on);
     tab.classList.toggle('text-stone-600', !on);
     tab.classList.toggle('font-semibold', !on);
-    tab.classList.toggle('hover:bg-white/60', !on);
+    tab.classList.toggle('hover:text-sky-700', !on);
     tab.setAttribute('aria-current', on ? 'page' : 'false');
   });
+  requestAnimationFrame(moveNavIndicator);
   render();
 }
 
@@ -1849,6 +1886,7 @@ async function addTask() {
 function toggleTask(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
+  lastToggledId = id;
   task.completed = !task.completed;
 
   if (task.completed) {
@@ -2687,6 +2725,15 @@ $('search-all-dates-check').addEventListener('change', e => {
   taskAutosyncCheck.checked = autoSyncDefault;
   $('daily-intention-input').value = dailyIntention;
   switchView('day');
+
+  const hero = $('hero-banner-section');
+  hero.addEventListener('pointermove', e => {
+    const r = hero.getBoundingClientRect();
+    hero.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+    hero.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+  });
+  window.addEventListener('resize', moveNavIndicator);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveNavIndicator);
 
   // Ask the browser not to clear Sunbeam's storage when space runs low
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

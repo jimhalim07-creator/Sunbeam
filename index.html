@@ -37,7 +37,7 @@
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,500..800,0..100,0..1;1,9..144,400..700,0..100,0..1&family=Karla:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=2026.10.25">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2026.10.29">
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-amber-200 selection:text-stone-900">
 
@@ -101,6 +101,7 @@
 
       <!-- Navigation tabs: full-width second row on mobile, centred on desktop -->
       <nav class="w-full lg:w-auto lg:order-2 flex items-center gap-1 bg-[#EFE3CA]/70 p-1 rounded-2xl border border-[#D9C6A0] overflow-x-auto no-scrollbar" aria-label="Planner views">
+        <span id="nav-indicator" aria-hidden="true"></span>
         <button type="button" data-view="day" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="sun"></i><span>Day</span></button>
         <button type="button" data-view="week" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="calendar-days"></i><span>Week</span></button>
         <button type="button" data-view="month" class="nav-tab flex-1 lg:flex-none whitespace-nowrap px-3 py-1.5 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"><i data-lucide="calendar-range"></i><span>Month</span></button>
@@ -179,19 +180,19 @@
 
         <div class="flex flex-col gap-3 lg:w-[420px] shrink-0 lg:mt-24">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 text-center">
-            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-sky-600">
+            <div class="stat-tile tile-lapis p-3 rounded-2xl">
               <div class="text-[10px] font-bold uppercase tracking-wider text-sky-700">Planned</div>
               <div id="stat-total" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-emerald-500">
+            <div class="stat-tile tile-faience p-3 rounded-2xl">
               <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Done</div>
               <div id="stat-completed" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-amber-400">
+            <div class="stat-tile tile-saffron p-3 rounded-2xl">
               <div class="text-[10px] font-bold uppercase tracking-wider text-amber-700">To do</div>
               <div id="stat-pending" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
-            <div class="bg-[#FFF8E8]/90 p-3 rounded-xl border border-[#E3D3B5] border-t-4 border-t-rose-500">
+            <div class="stat-tile tile-hibiscus p-3 rounded-2xl">
               <div class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Nudges</div>
               <div id="stat-reminders" class="text-2xl font-bold font-serif-human text-stone-900 tabular-nums">0</div>
             </div>
@@ -745,13 +746,13 @@
   </dialog>
 
   <footer class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8 text-[11px] text-stone-400 text-center no-print">
-    Your plans are saved in this browser. Use Data → Download backup to move them to another device.
+    Your plans are saved here and backed up in your Outlook calendar. Sign in on any browser to get them back.
   </footer>
 
-  <script src="config.js?v=2026.10.25" defer></script>
-  <script src="assets/js/sound.js?v=2026.10.25" defer></script>
-  <script src="assets/js/outlook.js?v=2026.10.25" defer></script>
-  <script src="assets/js/quotes.js?v=2026.10.25" defer></script>
-  <script src="assets/js/app.js?v=2026.10.25" defer></script>
+  <script src="config.js?v=2026.10.29" defer></script>
+  <script src="assets/js/sound.js?v=2026.10.29" defer></script>
+  <script src="assets/js/outlook.js?v=2026.10.29" defer></script>
+  <script src="assets/js/quotes.js?v=2026.10.29" defer></script>
+  <script src="assets/js/app.js?v=2026.10.29" defer></script>
 </body>
 </html>

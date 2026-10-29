@@ -104,6 +104,223 @@ summary:focus-visible {
   .rise-in, .progress-ring-circle, .hero-sun .rays { animation: none; transition: none; }
 }
 
+/* =====================================================================
+   VIBRANT LAYER
+   Brighter Nile colours, drifting light, glass cards and playful motion.
+   Everything animated respects "reduce motion" (bottom of this section).
+   ===================================================================== */
+:root {
+  --hibiscus: #E0457B;
+  --lotus: #7C5CE0;
+  --sunset: #F07D3A;
+  --turquoise: #22B8A7;
+  --sky-glow: #4C8DF6;
+  --grad-sunrise: linear-gradient(120deg, #F2B233 0%, #F07D3A 35%, #E0457B 70%, #7C5CE0 100%);
+  --grad-nile: linear-gradient(120deg, #2A4A91 0%, #4C8DF6 45%, #22B8A7 100%);
+}
+
+/* Drifting colour glows behind the whole page */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+body::before {
+  top: -20vmax; right: -15vmax;
+  background: radial-gradient(circle at 30% 30%, #F2B233, #F07D3A 45%, transparent 70%);
+  animation: drift-a 26s ease-in-out infinite alternate;
+}
+body::after {
+  bottom: -25vmax; left: -15vmax;
+  background: radial-gradient(circle at 60% 60%, #22B8A7, #4C8DF6 45%, transparent 70%);
+  animation: drift-b 32s ease-in-out infinite alternate;
+}
+@keyframes drift-a { to { transform: translate(-12vmax, 10vmax) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(14vmax, -8vmax) scale(1.1); } }
+
+/* Glass cards that lift and pick up a sunrise border on hover */
+.warm-card {
+  background-color: rgba(255, 251, 243, 0.78);
+  backdrop-filter: blur(14px) saturate(1.25);
+  -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+main .warm-card:not(#hero-banner-section):hover {
+  transform: translateY(-2px);
+  border-color: transparent;
+  box-shadow: 0 0 0 1.5px rgba(240, 125, 58, 0.55), 0 18px 40px -22px rgba(224, 69, 123, 0.45);
+}
+
+/* Hero: sunrise over the Nile, with a soft spotlight that follows your mouse */
+#hero-banner-section {
+  background:
+    radial-gradient(500px circle at var(--mx, 70%) var(--my, 20%), rgba(255, 255, 255, 0.75), transparent 45%),
+    linear-gradient(135deg, #FFF1D2 0%, #FFE0CC 38%, #FCE3EC 62%, #DDF4F0 100%);
+  border-color: rgba(240, 125, 58, 0.35);
+}
+#view-greeting .name-squiggle {
+  background: var(--grad-nile);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+#hero-date {
+  background: var(--grad-sunrise);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Count tiles: bold gradients, white numbers, a little bounce */
+.stat-tile {
+  position: relative;
+  overflow: hidden;
+  border: none !important;
+  color: #fff;
+  box-shadow: 0 10px 24px -14px rgba(27, 34, 56, 0.6);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-tile::after {
+  content: '';
+  position: absolute;
+  inset: -40% -60% auto auto;
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+.stat-tile:hover { transform: translateY(-3px) rotate(-1deg); box-shadow: 0 16px 30px -14px rgba(27, 34, 56, 0.7); }
+.stat-tile > div { color: #fff !important; position: relative; z-index: 1; }
+.stat-tile > div:first-child { opacity: 0.9; }
+.tile-lapis { background: linear-gradient(135deg, #2A4A91, #4C8DF6); }
+.tile-faience { background: linear-gradient(135deg, #17776E, #22B8A7); }
+.tile-saffron { background: linear-gradient(135deg, #E9AE30, #F07D3A); }
+.tile-hibiscus { background: linear-gradient(135deg, #D95D3F, #E0457B); }
+.count-bump { animation: count-bump 0.45s ease; }
+@keyframes count-bump { 40% { transform: scale(1.25); } }
+
+/* Navigation: a sliding gradient pill marks the current view */
+nav[aria-label="Planner views"] { position: relative; isolation: isolate; }
+#nav-indicator {
+  position: absolute;
+  z-index: -1;
+  top: 4px; bottom: 4px;
+  border-radius: 0.75rem;
+  background: var(--grad-sunrise);
+  box-shadow: 0 6px 16px -8px rgba(224, 69, 123, 0.7);
+  transition: left 0.35s cubic-bezier(0.22, 1, 0.36, 1), width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* (selector is long so it beats the evening-mode background rules) */
+nav[aria-label="Planner views"] .nav-tab { background: transparent !important; }
+nav[aria-label="Planner views"] .nav-tab[aria-current="page"] { color: #fff !important; box-shadow: none !important; }
+
+/* Buttons */
+#add-btn,
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  background: var(--grad-nile) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px -12px rgba(42, 74, 145, 0.8);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+#add-btn:hover,
+.btn-glow:hover { transform: translateY(-1px); box-shadow: 0 14px 26px -12px rgba(34, 184, 167, 0.8); }
+#add-btn::after,
+.btn-glow::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+#add-btn:hover::after,
+.btn-glow:hover::after { left: 120%; }
+#timer-start-btn { background: var(--grad-sunrise) !important; }
+
+/* Icon badges become little gradient gems */
+.icon-badge { color: #fff !important; box-shadow: 0 6px 14px -8px rgba(27, 34, 56, 0.6); }
+.icon-badge.bg-amber-100 { background: linear-gradient(135deg, #F2B233, #F07D3A); }
+.icon-badge.bg-emerald-100 { background: linear-gradient(135deg, #17776E, #22B8A7); }
+.icon-badge.bg-sky-100 { background: linear-gradient(135deg, #2A4A91, #4C8DF6); }
+.icon-badge.bg-rose-100 { background: linear-gradient(135deg, #D95D3F, #E0457B); }
+
+/* Progress bar shimmer */
+#progress-bar {
+  background: linear-gradient(90deg, #22B8A7, #F2B233, #F07D3A, #E0457B, #22B8A7) !important;
+  background-size: 300% 100% !important;
+  animation: shimmer 6s linear infinite;
+}
+#focus-timer-bar { background: var(--grad-sunrise) !important; }
+@keyframes shimmer { to { background-position: 300% 0; } }
+
+/* Plans: lift on hover, a pop when ticked */
+#task-list > li { transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease; }
+#task-list > li:hover { transform: translateX(3px); box-shadow: 0 10px 24px -18px rgba(27, 34, 56, 0.55); }
+.check-pop { animation: check-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes check-pop { 0% { transform: scale(0.6); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.cat-stripe { box-shadow: inset 5px 0 0 var(--stripe, var(--line)); }
+
+/* Mood and priority chips get colour when chosen */
+.mood-btn[aria-checked="true"] { background: var(--grad-nile) !important; color: #fff !important; }
+.priority-chip[aria-checked="true"][data-priority="high"] { background: linear-gradient(135deg, #D95D3F, #E0457B) !important; color: #fff !important; border-color: transparent !important; }
+.priority-chip[aria-checked="true"][data-priority="medium"] { background: linear-gradient(135deg, #E9AE30, #F07D3A) !important; color: #fff !important; border-color: transparent !important; }
+.priority-chip[aria-checked="true"][data-priority="low"] { background: linear-gradient(135deg, #17776E, #22B8A7) !important; color: #fff !important; border-color: transparent !important; }
+
+/* Week view: each weekday has its own colour band; today glows */
+.week-day-head { position: relative; }
+.week-day-head::before {
+  content: '';
+  position: absolute;
+  left: -12px; right: -12px; top: -12px;
+  height: 5px;
+  border-radius: 1rem 1rem 0 0;
+  background: var(--day-grad, var(--grad-sunrise));
+}
+.today-glow { box-shadow: 0 0 0 2px #F07D3A, 0 0 26px -4px rgba(240, 125, 58, 0.75) !important; animation: today-pulse 3s ease-in-out infinite; }
+@keyframes today-pulse { 50% { box-shadow: 0 0 0 2px #E0457B, 0 0 34px -2px rgba(224, 69, 123, 0.7); } }
+
+/* Month view: busier days glow warmer (set from JS as --heat 0…1) */
+.month-cell.has-plans {
+  background-image: linear-gradient(160deg, rgba(242, 178, 51, calc(var(--heat) * 0.55)), rgba(224, 69, 123, calc(var(--heat) * 0.35)));
+}
+.month-cell { transition: transform 0.15s ease, box-shadow 0.2s ease; }
+.month-cell:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 24px -16px rgba(27, 34, 56, 0.55); }
+
+/* Quote card */
+#daily-quote blockquote > span:first-child {
+  background: var(--grad-sunrise);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 3rem;
+}
+
+/* Night: neon-ish glows over the deep blue */
+body.evening-mode::before { background: radial-gradient(circle at 30% 30%, #E0457B, #7C5CE0 45%, transparent 70%); opacity: 0.35; }
+body.evening-mode::after { background: radial-gradient(circle at 60% 60%, #22B8A7, #2A4A91 45%, transparent 70%); opacity: 0.4; }
+body.evening-mode main .warm-card:not(.weekend-col) { background-color: rgba(22, 33, 58, 0.72) !important; }
+body.evening-mode main section#hero-banner-section {
+  background:
+    radial-gradient(500px circle at var(--mx, 70%) var(--my, 20%), rgba(124, 92, 224, 0.25), transparent 45%),
+    linear-gradient(135deg, #1A1F45 0%, #2A1B3D 45%, #102A3A 100%) !important;
+}
+body.evening-mode #view-greeting .name-squiggle { background: linear-gradient(120deg, #F2B233, #E0457B); -webkit-background-clip: text; background-clip: text; }
+body.evening-mode .month-cell.has-plans { background-image: linear-gradient(160deg, rgba(124, 92, 224, calc(var(--heat) * 0.6)), rgba(224, 69, 123, calc(var(--heat) * 0.45))) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after, #progress-bar, .today-glow, .count-bump, .check-pop { animation: none !important; }
+  .warm-card, #task-list > li, .month-cell, .stat-tile { transition: none !important; }
+}
+
 /* ========== Work week ========== */
 /* Work days full width, weekend days narrower (set from JS in renderWeekView) */
 @media (min-width: 1024px) {
